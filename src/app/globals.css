@@ -37,7 +37,22 @@ html {
 }
 
 /* Fix for iPhone Safari black bars */
+html, body, #__next {
+  height: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+}
+
+/* Ensure full viewport usage on iPhone */
 @supports (height: 100dvh) {
+  html, body, #__next {
+    height: 100dvh !important;
+    min-height: 100dvh !important;
+  }
+  
   .min-h-screen {
     min-height: 100dvh !important;
   }
@@ -47,11 +62,18 @@ html {
   }
 }
 
-/* Ensure Next.js root takes full height */
-#__next {
-  height: 100%;
-  min-height: 100vh;
-  min-height: 100dvh;
+/* Force full viewport on iOS */
+@supports (-webkit-touch-callout: none) {
+  html, body, #__next {
+    height: 100vh !important;
+    height: 100dvh !important;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    overflow: auto;
+  }
 }
 
 /* Safe area support for iPhone */

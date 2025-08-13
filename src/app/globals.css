@@ -95,9 +95,9 @@ input[type="url"],
 input[type="search"],
 textarea,
 select {
-  color: #171717 !important;
+  color: #111827 !important;
   background-color: #ffffff !important;
-  -webkit-text-fill-color: #171717 !important;
+  -webkit-text-fill-color: #111827 !important;
   border: 1px solid #d1d5db !important;
   border-radius: 0.375rem !important;
   padding: 0.5rem 0.75rem !important;
@@ -108,7 +108,7 @@ select {
 /* Placeholder styling for better visibility */
 input::placeholder,
 textarea::placeholder {
-  color: #6b7280 !important;
+  color: #4b5563 !important;
   opacity: 1 !important;
 }
 
@@ -124,15 +124,15 @@ textarea::placeholder {
   input[type="search"],
   textarea,
   select {
-    color: #ededed !important;
-    background-color: #0a0a0a !important;
-    -webkit-text-fill-color: #ededed !important;
-    border: 1px solid #374151 !important;
+    color: #111827 !important;
+    background-color: #ffffff !important;
+    -webkit-text-fill-color: #111827 !important;
+    border: 1px solid #d1d5db !important;
   }
   
   input::placeholder,
   textarea::placeholder {
-    color: #9ca3af !important;
+    color: #4b5563 !important;
   }
 }
 

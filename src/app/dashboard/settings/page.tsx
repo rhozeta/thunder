@@ -27,21 +27,25 @@ export default function SettingsPage() {
 
   // Load existing profile data
   useEffect(() => {
-    if (user) {
-      const existingProfileImage = ProfileService.getProfileImage(user.id)
-      setFormData({
-        firstName: user.user_metadata?.first_name || '',
-        lastName: user.user_metadata?.last_name || '',
-        email: user.email || '',
-        phone: user.user_metadata?.phone || '',
-        brokerageName: user.user_metadata?.brokerage_name || '',
-        address: user.user_metadata?.address || '',
-        city: user.user_metadata?.city || '',
-        state: user.user_metadata?.state || '',
-        zipCode: user.user_metadata?.zip_code || '',
-        profileImage: existingProfileImage
-      })
+    const loadProfileData = async () => {
+      if (user) {
+        const existingProfileImage = await ProfileService.getProfileImage(user.id)
+        setFormData({
+          firstName: user.user_metadata?.first_name || '',
+          lastName: user.user_metadata?.last_name || '',
+          email: user.email || '',
+          phone: user.user_metadata?.phone || '',
+          brokerageName: user.user_metadata?.brokerage_name || '',
+          address: user.user_metadata?.address || '',
+          city: user.user_metadata?.city || '',
+          state: user.user_metadata?.state || '',
+          zipCode: user.user_metadata?.zip_code || '',
+          profileImage: existingProfileImage
+        })
+      }
     }
+    
+    loadProfileData()
   }, [user])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {

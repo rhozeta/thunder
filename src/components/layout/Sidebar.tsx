@@ -84,7 +84,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
             onClick={() => onToggle(!isCollapsed)}
             className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
           >
-            {isCollapsed ? <Menu className="h-5 w-5" /> : <X className="h-5 w-5" />}
+            {isCollapsed ? <Menu className="h-5 w-5 text-gray-900" /> : <X className="h-5 w-5 text-gray-900" />}
           </button>
         </div>
 

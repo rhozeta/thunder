@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { TaskService } from '@/services/tasks'
 import { Task, TaskStatus } from '@/types/task'
 import { ContactService } from '@/services/contacts'
+import { TaskMobileCard } from '@/components/tasks/TaskMobileCard'
 import { DealService } from '@/services/deals'
 import {
   DndContext,
@@ -56,7 +57,8 @@ import {
   Undo,
   User,
   Briefcase,
-  ExternalLink
+  ExternalLink,
+  RotateCcw
 } from 'lucide-react'
 import { format, isToday, isTomorrow, isThisWeek, isPast } from 'date-fns'
 import Link from 'next/link'
@@ -252,12 +254,24 @@ export default function TasksPage() {
   }
 
   const handleTaskUndo = async (taskId: string) => {
-    if (!user) return
     try {
       await TaskService.updateTask(taskId, { status: 'pending' })
-      loadTasks()
+      setTasks(prev => prev.map(task => 
+        task.id === taskId ? { ...task, status: 'pending' as TaskStatus } : task
+      ))
     } catch (error) {
       console.error('Error undoing task:', error)
+    }
+  }
+
+  const handleTaskStatusChange = async (taskId: string, status: string) => {
+    try {
+      await TaskService.updateTask(taskId, { status: status as TaskStatus })
+      setTasks(prev => prev.map(task => 
+        task.id === taskId ? { ...task, status: status as TaskStatus } : task
+      ))
+    } catch (error) {
+      console.error('Error updating task status:', error)
     }
   }
 
@@ -588,7 +602,31 @@ export default function TasksPage() {
       {viewMode === 'table' ? (
         /* Table View */
         <div className="bg-white shadow rounded-lg overflow-hidden">
-          <div className="overflow-x-auto">
+          {/* Mobile Card View */}
+          <div className="lg:hidden space-y-4">
+            {filteredAndSortedTasks.length === 0 && (
+              <div className="text-center py-12">
+                <div className="text-gray-500">No tasks found matching your criteria.</div>
+              </div>
+            )}
+            {filteredAndSortedTasks.map((task) => (
+              <TaskMobileCard
+                key={task.id}
+                task={task}
+                onEdit={(task) => {
+                  setSelectedTask(task)
+                  setShowTaskSidebar(true)
+                }}
+                onDelete={handleTaskDelete}
+                onComplete={handleTaskComplete}
+                onUndo={handleTaskUndo}
+                onStatusChange={handleTaskStatusChange}
+              />
+            ))}
+          </div>
+
+          {/* Desktop Table View */}
+          <div className="hidden lg:block bg-white shadow overflow-hidden rounded-lg">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
@@ -702,28 +740,43 @@ export default function TasksPage() {
                       {task.contact ? (
                         <Link 
                           href={`/dashboard/contacts/${task.contact.id}`}
-                          className="flex items-center text-blue-600 hover:text-blue-900 hover:underline"
+                          className="text-blue-600 hover:text-blue-900"
                         >
-                          <User className="w-4 h-4 mr-1" />
                           {task.contact.first_name} {task.contact.last_name}
-                          <ExternalLink className="w-3 h-3 ml-1" />
                         </Link>
                       ) : (
-                        <span className="text-gray-400">No contact</span>
+                        <span className="text-gray-400 text-xs">No contact</span>
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {task.deal ? (
-                        <div className="flex items-center text-gray-900">
-                          <Briefcase className="w-4 h-4 mr-1 text-gray-400" />
+                        <Link 
+                          href={`/dashboard/deals/${task.deal.id}`}
+                          className="text-blue-600 hover:text-blue-900"
+                        >
                           {task.deal.title}
-                        </div>
+                        </Link>
                       ) : (
-                        <span className="text-gray-400">No deal</span>
+                        <span className="text-gray-400 text-xs">No deal</span>
                       )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex items-center space-x-2">
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <div className="flex items-center justify-end space-x-2">
+                        {task.status !== 'completed' ? (
+                          <button
+                            onClick={() => handleTaskComplete(task.id)}
+                            className="text-green-600 hover:text-green-900"
+                          >
+                            <CheckSquare className="w-4 h-4" />
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handleTaskUndo(task.id)}
+                            className="text-blue-600 hover:text-blue-900"
+                          >
+                            <RotateCcw className="w-4 h-4" />
+                          </button>
+                        )}
                         <button
                           onClick={() => {
                             setSelectedTask(task)
@@ -733,23 +786,6 @@ export default function TasksPage() {
                         >
                           <Edit className="w-4 h-4" />
                         </button>
-                        {task.status === 'completed' ? (
-                          <button
-                            onClick={() => handleTaskUndo(task.id)}
-                            className="text-orange-600 hover:text-orange-900"
-                            title="Move back to pending"
-                          >
-                            <Undo className="w-4 h-4" />
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => handleTaskComplete(task.id)}
-                            className="text-green-600 hover:text-green-900"
-                            title="Mark as completed"
-                          >
-                            <CheckSquare className="w-4 h-4" />
-                          </button>
-                        )}
                         <button
                           onClick={() => handleTaskDelete(task.id)}
                           className="text-red-600 hover:text-red-900"

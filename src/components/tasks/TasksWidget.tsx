@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { Task } from '@/types/task'
 import { TaskService } from '@/services/tasks'
+import { TaskMobileCard } from './TaskMobileCard'
 
 function isDueWithinFiveDays(due: string | null): boolean {
   if (!due) return false
@@ -22,6 +23,42 @@ export default function TasksWidget() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'all' | 'dueSoon'>('all')
+
+  const handleComplete = async (taskId: string) => {
+    try {
+      await TaskService.updateTask(taskId, { status: 'completed' })
+      setTasks(prev => prev.map(task => 
+        task.id === taskId ? { ...task, status: 'completed' as const } : task
+      ))
+    } catch (error) {
+      console.error('Error completing task:', error)
+    }
+  }
+
+  const handleUndo = async (taskId: string) => {
+    try {
+      await TaskService.updateTask(taskId, { status: 'pending' })
+      setTasks(prev => prev.map(task => 
+        task.id === taskId ? { ...task, status: 'pending' as const } : task
+      ))
+    } catch (error) {
+      console.error('Error undoing task:', error)
+    }
+  }
+
+  const handleEdit = (task: Task) => {
+    // This would typically open a modal or navigate to edit page
+    console.log('Edit task:', task)
+  }
+
+  const handleDelete = async (taskId: string) => {
+    try {
+      await TaskService.deleteTask(taskId)
+      setTasks(prev => prev.filter(task => task.id !== taskId))
+    } catch (error) {
+      console.error('Error deleting task:', error)
+    }
+  }
 
   useEffect(() => {
     const load = async () => {
@@ -70,32 +107,78 @@ export default function TasksWidget() {
       {error && <p className="text-red-600">{error}</p>}
 
       {!loading && !error && (
-        <ul className="divide-y divide-gray-200">
-          {displayed.length === 0 && (
-            <li className="py-4 text-gray-500">No tasks to show.</li>
-          )}
-          {displayed.map((t) => (
-            <li key={t.id} className="py-3 flex items-start justify-between">
-              <div>
-                <p className="font-medium text-gray-900">{t.title}</p>
-                {t.description && (
-                  <p className="text-sm text-gray-600 mt-1 line-clamp-2">{t.description}</p>
-                )}
-                <div className="mt-1 text-xs text-gray-500">
-                  <span className="capitalize">Priority: {t.priority}</span>
-                  <span className="mx-2">•</span>
-                  <span className="capitalize">Status: {t.status}</span>
-                  {t.due_date && (
-                    <>
+        <div>
+          {/* Mobile Card View */}
+          <div className="lg:hidden space-y-4">
+            {displayed.length === 0 && (
+              <div className="py-4 text-gray-500">No tasks to show.</div>
+            )}
+            {displayed.map((task) => (
+              <TaskMobileCard
+                key={task.id}
+                task={task}
+                onComplete={handleComplete}
+                onUndo={handleUndo}
+              />
+            ))}
+          </div>
+
+          {/* Desktop List View */}
+          <div className="hidden lg:block">
+            <ul className="divide-y divide-gray-200">
+              {displayed.length === 0 && (
+                <li className="py-4 text-gray-500">No tasks to show.</li>
+              )}
+              {displayed.map((t) => (
+                <li key={t.id} className="py-3 flex items-start justify-between">
+                  <div>
+                    <p className="font-medium text-gray-900">{t.title}</p>
+                    {t.description && (
+                      <p className="text-sm text-gray-600 mt-1 line-clamp-2">{t.description}</p>
+                    )}
+                    <div className="mt-1 text-xs text-gray-500">
+                      <span className="capitalize">Priority: {t.priority}</span>
                       <span className="mx-2">•</span>
-                      <span>Due: {new Date(t.due_date).toLocaleDateString()}</span>
-                    </>
-                  )}
-                </div>
-              </div>
-            </li>
-          ))}
-        </ul>
+                      <span className="capitalize">Status: {t.status}</span>
+                      {t.due_date && (
+                        <span> • Due: {new Date(t.due_date).toLocaleDateString()}</span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2 ml-4">
+                    {t.status !== 'completed' ? (
+                      <button
+                        onClick={() => handleComplete(t.id)}
+                        className="text-green-600 hover:text-green-800 text-sm"
+                      >
+                        Complete
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => handleUndo(t.id)}
+                        className="text-blue-600 hover:text-blue-800 text-sm"
+                      >
+                        Undo
+                      </button>
+                    )}
+                    <button
+                      onClick={() => handleEdit(t)}
+                      className="text-blue-600 hover:text-blue-800 text-sm"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleDelete(t.id)}
+                      className="text-red-600 hover:text-red-800 text-sm"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
       )}
     </div>
   )

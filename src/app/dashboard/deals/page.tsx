@@ -313,133 +313,213 @@ export default function DealsPage() {
       ) : (
         <>
           {viewMode === 'table' ? (
-            /* Table View */
-            <div className="bg-white shadow rounded-lg overflow-hidden">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th 
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                      onClick={() => handleSort('title')}
-                    >
-                      <div className="flex items-center space-x-1">
-                        <span>Deal</span>
-                        {sortField === 'title' && (
-                          sortDirection === 'asc' ? <SortAsc className="w-4 h-4" /> : <SortDesc className="w-4 h-4" />
+            /* Responsive Table/Card View */
+            <div>
+              {/* Mobile Card View */}
+              <div className="lg:hidden space-y-4">
+                {filteredAndSortedDeals.map((deal) => (
+                  <div key={deal.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                    <div className="flex items-start justify-between mb-3">
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-900">{deal.title}</h3>
+                        {deal.property_address && (
+                          <p className="text-sm text-gray-600">{deal.property_address}</p>
                         )}
                       </div>
-                    </th>
-                    <th 
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                      onClick={() => handleSort('deal_type')}
-                    >
-                      <div className="flex items-center space-x-1">
-                        <span>Type</span>
-                        {sortField === 'deal_type' && (
-                          sortDirection === 'asc' ? <SortAsc className="w-4 h-4" /> : <SortDesc className="w-4 h-4" />
-                        )}
-                      </div>
-                    </th>
-                    <th 
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                      onClick={() => handleSort('status')}
-                    >
-                      <div className="flex items-center space-x-1">
-                        <span>Status</span>
-                        {sortField === 'status' && (
-                          sortDirection === 'asc' ? <SortAsc className="w-4 h-4" /> : <SortDesc className="w-4 h-4" />
-                        )}
-                      </div>
-                    </th>
-                    <th 
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                      onClick={() => handleSort('price')}
-                    >
-                      <div className="flex items-center space-x-1">
-                        <span>Price</span>
-                        {sortField === 'price' && (
-                          sortDirection === 'asc' ? <SortAsc className="w-4 h-4" /> : <SortDesc className="w-4 h-4" />
-                        )}
-                      </div>
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Contact
-                    </th>
-                    <th 
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                      onClick={() => handleSort('expected_close_date')}
-                    >
-                      <div className="flex items-center space-x-1">
-                        <span>Expected Close</span>
-                        {sortField === 'expected_close_date' && (
-                          sortDirection === 'asc' ? <SortAsc className="w-4 h-4" /> : <SortDesc className="w-4 h-4" />
-                        )}
-                      </div>
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredAndSortedDeals.map((deal) => (
-                    <tr key={deal.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div>
-                          <div className="text-sm font-medium text-gray-900">{deal.title}</div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-500">Type:</span>
                         <StatusChip
                           value={getDealTypeDisplayName(deal.deal_type)}
                           {...DEAL_TYPE_COLORS[deal.deal_type as keyof typeof DEAL_TYPE_COLORS]}
                         />
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      </div>
+                      
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-500">Status:</span>
                         <StatusChip
                           value={getStatusDisplayName(deal.status)}
                           {...DEAL_STATUS_COLORS[deal.status as keyof typeof DEAL_STATUS_COLORS]}
                         />
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {deal.price ? `$${deal.price.toLocaleString()}` : 'Not set'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      </div>
+                      
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-500">Price:</span>
+                        <span className="text-sm font-medium text-gray-900">
+                          {deal.price ? `$${deal.price.toLocaleString()}` : 'Not set'}
+                        </span>
+                      </div>
+                      
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-500">Contact:</span>
                         {deal.contacts ? (
                           <Link 
                             href={`/dashboard/contacts/${deal.contact_id}`}
-                            className="flex items-center text-blue-600 hover:text-blue-800 hover:underline transition-colors"
+                            className="text-sm text-blue-600 hover:text-blue-800"
                           >
-                            <Users className="w-4 h-4 mr-1 text-gray-400" />
                             {deal.contacts.first_name} {deal.contacts.last_name}
                           </Link>
                         ) : (
-                          <span className="text-gray-400">No contact</span>
+                          <span className="text-sm text-gray-400">No contact</span>
                         )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {deal.expected_close_date ? format(new Date(deal.expected_close_date + 'T00:00:00'), 'MMM dd, yyyy') : 'Not set'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <div className="flex items-center space-x-2">
-                          <button
-                            onClick={() => handleDealEdit(deal)}
-                            className="text-blue-600 hover:text-blue-900"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => handleDealDelete(deal.id)}
-                            className="text-red-600 hover:text-red-900"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                      </div>
+                      
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-500">Expected Close:</span>
+                        <span className="text-sm text-gray-900">
+                          {deal.expected_close_date ? format(new Date(deal.expected_close_date + 'T00:00:00'), 'MMM dd, yyyy') : 'Not set'}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center space-x-2 mt-4 pt-3 border-t border-gray-100">
+                      <button
+                        onClick={() => handleDealEdit(deal)}
+                        className="flex-1 bg-blue-50 text-blue-600 hover:bg-blue-100 text-sm py-2 px-3 rounded-md transition-colors"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDealDelete(deal.id)}
+                        className="flex-1 bg-red-50 text-red-600 hover:bg-red-100 text-sm py-2 px-3 rounded-md transition-colors"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop Table View */}
+              <div className="hidden lg:block bg-white shadow rounded-lg overflow-hidden">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th 
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                        onClick={() => handleSort('title')}
+                      >
+                        <div className="flex items-center space-x-1">
+                          <span>Deal</span>
+                          {sortField === 'title' && (
+                            sortDirection === 'asc' ? <SortAsc className="w-4 h-4" /> : <SortDesc className="w-4 h-4" />
+                          )}
                         </div>
-                      </td>
+                      </th>
+                      <th 
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                        onClick={() => handleSort('deal_type')}
+                      >
+                        <div className="flex items-center space-x-1">
+                          <span>Type</span>
+                          {sortField === 'deal_type' && (
+                            sortDirection === 'asc' ? <SortAsc className="w-4 h-4" /> : <SortDesc className="w-4 h-4" />
+                          )}
+                        </div>
+                      </th>
+                      <th 
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                        onClick={() => handleSort('status')}
+                      >
+                        <div className="flex items-center space-x-1">
+                          <span>Status</span>
+                          {sortField === 'status' && (
+                            sortDirection === 'asc' ? <SortAsc className="w-4 h-4" /> : <SortDesc className="w-4 h-4" />
+                          )}
+                        </div>
+                      </th>
+                      <th 
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                        onClick={() => handleSort('price')}
+                      >
+                        <div className="flex items-center space-x-1">
+                          <span>Price</span>
+                          {sortField === 'price' && (
+                            sortDirection === 'asc' ? <SortAsc className="w-4 h-4" /> : <SortDesc className="w-4 h-4" />
+                          )}
+                        </div>
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Contact
+                      </th>
+                      <th 
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                        onClick={() => handleSort('expected_close_date')}
+                      >
+                        <div className="flex items-center space-x-1">
+                          <span>Expected Close</span>
+                          {sortField === 'expected_close_date' && (
+                            sortDirection === 'asc' ? <SortAsc className="w-4 h-4" /> : <SortDesc className="w-4 h-4" />
+                          )}
+                        </div>
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Actions
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {filteredAndSortedDeals.map((deal) => (
+                      <tr key={deal.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div>
+                            <div className="text-sm font-medium text-gray-900">{deal.title}</div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <StatusChip
+                            value={getDealTypeDisplayName(deal.deal_type)}
+                            {...DEAL_TYPE_COLORS[deal.deal_type as keyof typeof DEAL_TYPE_COLORS]}
+                          />
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <StatusChip
+                            value={getStatusDisplayName(deal.status)}
+                            {...DEAL_STATUS_COLORS[deal.status as keyof typeof DEAL_STATUS_COLORS]}
+                          />
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {deal.price ? `$${deal.price.toLocaleString()}` : 'Not set'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {deal.contacts ? (
+                            <Link 
+                              href={`/dashboard/contacts/${deal.contact_id}`}
+                              className="flex items-center text-blue-600 hover:text-blue-800 hover:underline transition-colors"
+                            >
+                              <Users className="w-4 h-4 mr-1 text-gray-400" />
+                              {deal.contacts.first_name} {deal.contacts.last_name}
+                            </Link>
+                          ) : (
+                            <span className="text-gray-400">No contact</span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {deal.expected_close_date ? format(new Date(deal.expected_close_date + 'T00:00:00'), 'MMM dd, yyyy') : 'Not set'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          <div className="flex items-center space-x-2">
+                            <button
+                              onClick={() => handleDealEdit(deal)}
+                              className="text-blue-600 hover:text-blue-900"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDealDelete(deal.id)}
+                              className="text-red-600 hover:text-red-900"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           ) : (
             /* Kanban View */

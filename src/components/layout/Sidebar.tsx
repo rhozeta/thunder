@@ -53,23 +53,19 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const isCollapsed = collapsed
   const [profileImage, setProfileImage] = useState<string | null>(null)
 
-  // Load profile image from Supabase
+  // Load profile image from localStorage
   useEffect(() => {
-    const loadProfileImage = async () => {
-      if (user?.id) {
-        const image = await ProfileService.getProfileImage(user.id)
-        setProfileImage(image)
-      }
+    if (user?.id) {
+      const image = ProfileService.getProfileImage(user.id)
+      setProfileImage(image)
     }
-    
-    loadProfileImage()
   }, [user?.id])
 
   // Listen for profile updates to refresh the image
   useEffect(() => {
-    const handleProfileUpdate = async () => {
+    const handleProfileUpdate = () => {
       if (user?.id) {
-        const image = await ProfileService.getProfileImage(user.id)
+        const image = ProfileService.getProfileImage(user.id)
         setProfileImage(image)
       }
     }

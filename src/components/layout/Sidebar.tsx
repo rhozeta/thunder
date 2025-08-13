@@ -15,7 +15,8 @@ import {
   User,
   BarChart3,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  Settings
 } from 'lucide-react'
 
 const navigation = [
@@ -30,6 +31,7 @@ const navigation = [
       { name: 'Analytics', href: '/dashboard/tasks/analytics', icon: BarChart3 }
     ]
   },
+  { name: 'Settings', href: '/dashboard/settings', icon: Settings },
 ]
 
 interface NavigationItem {
@@ -179,13 +181,24 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         {/* User section */}
         <div className="border-t border-gray-200 p-4">
           <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'space-x-3'}`}>
-            <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-              <User className="h-4 w-4 text-white" />
+            <div className="w-8 h-8 rounded-full overflow-hidden bg-blue-500 flex items-center justify-center">
+              {user?.user_metadata?.profile_image ? (
+                <img 
+                  src={user.user_metadata.profile_image} 
+                  alt="Profile" 
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <User className="h-4 w-4 text-white" />
+              )}
             </div>
             {!isCollapsed && (
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-gray-900 truncate">
-                  {user.email?.split('@')[0]}
+                  {user?.user_metadata?.first_name && user?.user_metadata?.last_name 
+                    ? `${user.user_metadata.first_name} ${user.user_metadata.last_name}`
+                    : user.email?.split('@')[0]
+                  }
                 </p>
                 <p className="text-xs text-gray-500 truncate">
                   {user.email}

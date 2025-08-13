@@ -49,22 +49,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const { user, signOut } = useAuth()
   const isCollapsed = collapsed
   
-  // Manage body class for viewport stability on mobile
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      if (!isCollapsed && window.innerWidth < 1024) {
-        document.body.classList.add('sidebar-open')
-      } else {
-        document.body.classList.remove('sidebar-open')
-      }
-    }
-    
-    return () => {
-      if (typeof window !== 'undefined') {
-        document.body.classList.remove('sidebar-open')
-      }
-    }
-  }, [isCollapsed])
+
   const [expandedItems, setExpandedItems] = React.useState<string[]>(['Tasks'])
 
   const handleSignOut = async () => {
@@ -81,19 +66,17 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
     <>
       {/* Mobile backdrop */}
       <div 
-        className={`fixed top-0 left-0 w-full h-full bg-black bg-opacity-50 z-40 lg:hidden transition-opacity duration-300 ${
+        className={`fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden transition-opacity duration-300 ${
           !isCollapsed ? 'opacity-100' : 'opacity-0 pointer-events-none'
         }`}
         onClick={() => onToggle(true)}
-        style={{ height: '100dvh' }}
       />
 
       {/* Sidebar */}
       <div 
-        className={`fixed top-0 left-0 z-50 flex flex-col bg-white shadow-lg transition-all duration-300 ease-in-out ${
+        className={`fixed inset-y-0 left-0 z-50 flex flex-col bg-white shadow-lg transition-all duration-300 ease-in-out ${
           isCollapsed ? 'w-16 lg:w-16' : 'w-64 lg:w-64'
         } ${isCollapsed ? '-translate-x-full lg:translate-x-0' : 'translate-x-0'}`}
-        style={{ height: '100dvh' }}
       >
         
         {/* Header */}

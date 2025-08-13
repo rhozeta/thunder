@@ -16,7 +16,16 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Thunder CRM - Real Estate CRM",
   description: "Real estate CRM designed for agents to manage contacts, leads, and deals",
-  viewport: "width=device-width, initial-scale=1, viewport-fit=cover",
+  viewport: "width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Thunder CRM",
+  },
+  formatDetection: {
+    telephone: false,
+  },
 };
 
 export default function RootLayout({

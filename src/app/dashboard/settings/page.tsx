@@ -28,6 +28,7 @@ export default function SettingsPage() {
   // Load existing profile data
   useEffect(() => {
     if (user) {
+      const existingProfileImage = ProfileService.getProfileImage(user.id)
       setFormData({
         firstName: user.user_metadata?.first_name || '',
         lastName: user.user_metadata?.last_name || '',
@@ -38,7 +39,7 @@ export default function SettingsPage() {
         city: user.user_metadata?.city || '',
         state: user.user_metadata?.state || '',
         zipCode: user.user_metadata?.zip_code || '',
-        profileImage: user.user_metadata?.profile_image || null
+        profileImage: existingProfileImage
       })
     }
   }, [user])
@@ -60,17 +61,22 @@ export default function SettingsPage() {
       }
       
       setIsLoading(true)
+      setMessage({ type: 'info', text: 'Processing image...' })
+      
       try {
-        // Upload to Supabase storage
+        // Process and compress image
         const imageUrl = await ProfileService.uploadProfileImage(file)
         setFormData(prev => ({
           ...prev,
           profileImage: imageUrl
         }))
-        setMessage({ type: 'success', text: 'Profile image ready for save!' })
-      } catch (error) {
+        setMessage({ type: 'success', text: 'Profile image processed and ready for save!' })
+      } catch (error: any) {
         console.error('Image upload error:', error)
-        setMessage({ type: 'error', text: 'Failed to upload image. Please try again.' })
+        setMessage({ 
+          type: 'error', 
+          text: error.message || 'Failed to process image. Please try a smaller image.' 
+        })
       } finally {
         setIsLoading(false)
       }
@@ -100,7 +106,10 @@ export default function SettingsPage() {
       }
 
       await ProfileService.updateProfile(user.id, profileData)
-      setMessage({ type: 'success', text: 'Profile updated successfully! Please refresh the page to see changes in the sidebar.' })
+      setMessage({ type: 'success', text: 'Profile updated successfully! Changes will appear in the sidebar immediately.' })
+      
+      // Trigger a custom event to refresh the sidebar
+      window.dispatchEvent(new CustomEvent('profileUpdated'))
     } catch (error) {
       console.error('Profile update error:', error)
       setMessage({ type: 'error', text: 'Failed to update profile. Please try again.' })
@@ -311,6 +320,8 @@ export default function SettingsPage() {
             <div className={`p-4 rounded-md ${
               message.type === 'success' 
                 ? 'bg-green-50 text-green-700 border border-green-200' 
+                : message.type === 'info'
+                ? 'bg-blue-50 text-blue-700 border border-blue-200'
                 : 'bg-red-50 text-red-700 border border-red-200'
             }`}>
               {message.text}

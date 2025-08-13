@@ -3,7 +3,8 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
-import React, { useEffect } from 'react'
+import { ProfileService } from '@/services/ProfileService'
+import React, { useEffect, useState } from 'react'
 import { 
   Home, 
   Users, 
@@ -50,7 +51,28 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const pathname = usePathname()
   const { user, signOut } = useAuth()
   const isCollapsed = collapsed
-  
+  const [profileImage, setProfileImage] = useState<string | null>(null)
+
+  // Load profile image from localStorage
+  useEffect(() => {
+    if (user?.id) {
+      const image = ProfileService.getProfileImage(user.id)
+      setProfileImage(image)
+    }
+  }, [user?.id])
+
+  // Listen for profile updates to refresh the image
+  useEffect(() => {
+    const handleProfileUpdate = () => {
+      if (user?.id) {
+        const image = ProfileService.getProfileImage(user.id)
+        setProfileImage(image)
+      }
+    }
+
+    window.addEventListener('profileUpdated', handleProfileUpdate)
+    return () => window.removeEventListener('profileUpdated', handleProfileUpdate)
+  }, [user?.id])
 
   const [expandedItems, setExpandedItems] = React.useState<string[]>(['Tasks'])
 
@@ -182,9 +204,9 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         <div className="border-t border-gray-200 p-4">
           <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'space-x-3'}`}>
             <div className="w-8 h-8 rounded-full overflow-hidden bg-blue-500 flex items-center justify-center">
-              {user?.user_metadata?.profile_image ? (
+              {profileImage ? (
                 <img 
-                  src={user.user_metadata.profile_image} 
+                  src={profileImage} 
                   alt="Profile" 
                   className="w-full h-full object-cover"
                 />

@@ -82,22 +82,28 @@ body {
   }
 }
 
-/* iOS Safari viewport fix - simpler approach */
+/* iOS Safari viewport fix - aggressive stabilization */
 @supports (-webkit-touch-callout: none) {
-  html, body {
-    height: 100vh;
-    height: 100dvh;
+  html {
+    height: 100%;
+    height: -webkit-fill-available;
+    overflow-x: hidden;
+  }
+  
+  body {
+    height: 100%;
+    height: -webkit-fill-available;
+    min-height: 100vh;
+    min-height: 100dvh;
     overflow-x: hidden;
     position: relative;
   }
   
-  body {
-    position: relative;
-    min-height: 100vh;
-    min-height: 100dvh;
+  /* Prevent any layout shifts that could trigger viewport recalculation */
+  * {
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
   }
-  
-
 }
 
 /* Safe area support for iPhone */

@@ -64,9 +64,9 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
   return (
     <>
-      {/* Mobile backdrop */}
+      {/* Mobile backdrop - transparent */}
       <div 
-        className={`fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden transition-opacity duration-300 ${
+        className={`fixed inset-0 z-40 lg:hidden transition-opacity duration-300 ${
           !isCollapsed ? 'opacity-100' : 'opacity-0 pointer-events-none'
         }`}
         onClick={() => onToggle(true)}
@@ -111,6 +111,12 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                         ? 'bg-blue-50 text-blue-700'
                         : 'text-gray-700 hover:bg-gray-100'
                     } ${isCollapsed ? 'justify-center' : ''}`}
+                    onClick={() => {
+                      // Auto-close sidebar on mobile when navigation item is clicked
+                      if (window.innerWidth < 1024) {
+                        onToggle(true)
+                      }
+                    }}
                   >
                     <item.icon className={`h-5 w-5 ${!isCollapsed ? 'mr-3' : ''}`} />
                     {!isCollapsed && item.name}
@@ -151,6 +157,12 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                               ? 'bg-blue-50 text-blue-700'
                               : 'text-gray-600 hover:bg-gray-100'
                           }`}
+                          onClick={() => {
+                            // Auto-close sidebar on mobile when child navigation item is clicked
+                            if (window.innerWidth < 1024) {
+                              onToggle(true)
+                            }
+                          }}
                         >
                           <child.icon className="h-4 w-4 mr-3" />
                           {child.name}

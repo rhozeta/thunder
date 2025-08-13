@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { User } from '@supabase/supabase-js'
 import { createClientComponentClient } from '@/lib/auth'
+import { ProfileService } from '@/services/ProfileService'
 
 interface AuthContextType {
   user: User | null
@@ -23,6 +24,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         const { data: { user } } = await supabase.auth.getUser()
         setUser(user)
+        
+        // Clean auth metadata to reduce cookie size
+        if (user) {
+          ProfileService.cleanAuthMetadata()
+        }
       } catch (error) {
         console.error('Error getting user:', error)
       } finally {

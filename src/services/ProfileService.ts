@@ -35,6 +35,7 @@ export class ProfileService {
       }
 
       // Update or insert into agents table with profile photo URL
+      console.log('Updating agents table with profile photo URL:', profileData.profileImage)
       const { error: agentError } = await supabase
         .from('agents')
         .upsert({
@@ -48,12 +49,15 @@ export class ProfileService {
           city: profileData.city,
           state: profileData.state,
           zip_code: profileData.zipCode,
-          profile_photo_url: profileData.profileImage,
+          profile_photo_url: profileData.profileImage || null,
           updated_at: new Date().toISOString()
         })
 
       if (agentError) {
         console.error('Agent table update failed:', agentError)
+        if (agentError.code === '42501') {
+          throw new Error('Permission denied: Please ensure RLS policies are configured for the agents table')
+        }
         throw agentError
       }
 
@@ -171,6 +175,28 @@ export class ProfileService {
     } catch (error) {
       console.error('Get profile image error:', error)
       return null
+    }
+  }
+
+  static async cleanAuthMetadata() {
+    try {
+      // Remove profile_image from auth metadata to reduce cookie size
+      const { error } = await supabase.auth.updateUser({
+        data: {
+          profile_image: null
+        }
+      })
+      
+      if (error) {
+        console.error('Failed to clean auth metadata:', error)
+        return false
+      }
+      
+      console.log('Auth metadata cleaned successfully')
+      return true
+    } catch (error) {
+      console.error('Clean auth metadata error:', error)
+      return false
     }
   }
 }

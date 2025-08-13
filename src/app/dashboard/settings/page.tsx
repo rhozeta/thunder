@@ -110,6 +110,7 @@ export default function SettingsPage() {
         profileImage: formData.profileImage
       }
 
+      console.log('Submitting profile data:', profileData)
       await ProfileService.updateProfile(user.id, profileData)
       setMessage({ type: 'success', text: 'Profile updated successfully! Changes will appear in the sidebar immediately.' })
       

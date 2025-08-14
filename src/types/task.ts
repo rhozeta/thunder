@@ -17,7 +17,7 @@ export interface Task {
   id: string
   title: string
   description: string | null
-  due_date: string
+  due_date: string | null
   priority: TaskPriority
   status: TaskStatus
   type: string | null
@@ -43,7 +43,7 @@ export interface Task {
 export interface TaskInsert {
   title: string
   description?: string | null
-  due_date: string
+  due_date?: string | null
   priority?: TaskPriority
   status?: TaskStatus
   type?: string | null
@@ -56,7 +56,7 @@ export interface TaskInsert {
 export interface TaskUpdate {
   title?: string
   description?: string | null
-  due_date?: string
+  due_date?: string | null
   priority?: TaskPriority
   status?: TaskStatus
   type?: string | null

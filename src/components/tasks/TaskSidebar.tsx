@@ -34,7 +34,8 @@ import {
   Code,
   Image,
   Link,
-  Minus
+  Minus,
+  Trash2
 } from 'lucide-react'
 import { format } from 'date-fns'
 
@@ -43,6 +44,7 @@ interface TaskSidebarProps {
   isOpen: boolean
   onClose: () => void
   onSave: (updatedTask?: Task) => void
+  onDelete?: (taskId: string) => void
 }
 
 interface Contact {
@@ -64,12 +66,12 @@ interface SlashCommand {
   action: (editor: HTMLTextAreaElement) => void
 }
 
-export function TaskSidebar({ task, isOpen, onClose, onSave }: TaskSidebarProps) {
+export function TaskSidebar({ task, isOpen, onClose, onSave, onDelete }: TaskSidebarProps) {
   const { user } = useAuth()
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    due_date: '',
+    due_date: '' as string | null,
     priority: 'medium' as TaskPriority,
     status: 'pending' as TaskStatus,
     type: '',
@@ -393,7 +395,7 @@ export function TaskSidebar({ task, isOpen, onClose, onSave }: TaskSidebarProps)
     try {
       const taskData = {
         ...formData,
-        due_date: formData.due_date || new Date().toISOString().split('T')[0],
+        due_date: formData.due_date || null,
         type: formData.type || null,
         contact_id: formData.contact_id || null,
         deal_id: formData.deal_id || null
@@ -455,18 +457,21 @@ export function TaskSidebar({ task, isOpen, onClose, onSave }: TaskSidebarProps)
         setTimeout(() => setSaveStatus('idle'), 2000)
       } else {
         // For new tasks, we'll save on first meaningful input
-        // Set sort_order to place at end of the status column
+        // Get current task count to determine next sort order
+        const allTasks = await TaskService.getTasks()
+        const maxSortOrder = allTasks.length > 0 ? Math.max(...allTasks.map(t => t.sort_order || 0)) : 0
+        
         const insertData: TaskInsert = {
           title: data.title,
           description: data.description || null,
           status: data.status,
           priority: data.priority,
-          due_date: data.due_date || new Date().toISOString(),
+          due_date: data.due_date || null,
           contact_id: data.contact_id || null,
           deal_id: data.deal_id || null,
           type: data.type || null,
           assigned_user_id: user.id,
-          sort_order: Date.now() // Use timestamp to ensure it's at the end
+          sort_order: maxSortOrder + 1 // Simple incremental sort order
         }
         const newTask = await TaskService.createTask(insertData)
         lastSavedDataRef.current = currentDataString
@@ -533,12 +538,28 @@ export function TaskSidebar({ task, isOpen, onClose, onSave }: TaskSidebarProps)
               <span className="text-xs text-red-600">Error saving</span>
             )}
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            <X className="w-5 h-5 text-gray-500" />
-          </button>
+          <div className="flex items-center space-x-2">
+            {task && onDelete && (
+              <button
+                onClick={() => {
+                  if (window.confirm('Are you sure you want to delete this task?')) {
+                    onDelete(task.id);
+                    onClose();
+                  }
+                }}
+                className="p-2 hover:bg-red-50 rounded-lg transition-colors group"
+                title="Delete task"
+              >
+                <Trash2 className="w-5 h-5 text-gray-500 group-hover:text-red-600" />
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <X className="w-5 h-5 text-gray-500" />
+            </button>
+          </div>
         </div>
 
         {/* Content */}
@@ -707,8 +728,8 @@ export function TaskSidebar({ task, isOpen, onClose, onSave }: TaskSidebarProps)
                 </div>
                 <input
                   type="date"
-                  value={formData.due_date}
-                  onChange={(e) => setFormData(prev => ({ ...prev, due_date: e.target.value }))}
+                  value={formData.due_date || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, due_date: e.target.value || null }))}
                   className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>

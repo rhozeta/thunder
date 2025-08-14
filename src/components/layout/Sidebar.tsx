@@ -17,13 +17,15 @@ import {
   BarChart3,
   ChevronDown,
   ChevronRight,
-  Settings
+  Settings,
+  Calendar
 } from 'lucide-react'
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: Home },
   { name: 'Contacts', href: '/dashboard/contacts', icon: Users },
   { name: 'Deals', href: '/dashboard/deals', icon: Briefcase },
+  { name: 'Calendar', href: '/dashboard/calendar', icon: Calendar },
   { 
     name: 'Tasks', 
     href: '/dashboard/tasks', 

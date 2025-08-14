@@ -17,7 +17,7 @@ export function TaskForm({ contactId, task, onSave, onCancel }: TaskFormProps) {
   const [formData, setFormData] = useState<TaskInsert>({
     title: task?.title || '',
     description: task?.description || null,
-    due_date: task?.due_date || new Date().toISOString().split('T')[0],
+    due_date: task?.due_date || null,
     priority: task?.priority || 'medium',
     status: task?.status || 'pending',
     contact_id: contactId || task?.contact_id || null,
@@ -75,7 +75,7 @@ export function TaskForm({ contactId, task, onSave, onCancel }: TaskFormProps) {
     const { name, value } = e.target
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: name === 'due_date' ? (value || null) : value
     }))
   }
 
@@ -118,7 +118,7 @@ export function TaskForm({ contactId, task, onSave, onCancel }: TaskFormProps) {
           <input
             type="date"
             name="due_date"
-            value={formData.due_date}
+            value={formData.due_date || ''}
             onChange={handleChange}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           />

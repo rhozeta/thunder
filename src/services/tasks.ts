@@ -52,12 +52,16 @@ export const TaskService = {
           id,
           first_name,
           last_name
+        ),
+        deal:deals(
+          id,
+          title
         )
       `)
       .eq('assigned_user_id', userId)
       .order('due_date', { ascending: true })
 
-    // If the join fails (e.g., foreign key constraints), try basic query
+    // If the join fails, try basic query
     if (error) {
       console.warn('Join query failed, trying basic query:', error.message)
       const basicResult = await supabase
@@ -67,7 +71,7 @@ export const TaskService = {
         .order('due_date', { ascending: true })
       
       if (basicResult.error) {
-        console.error('Error fetching user tasks:', {
+        console.error('Error fetching tasks:', {
           message: basicResult.error.message,
           details: (basicResult.error as any).details,
           hint: (basicResult.error as any).hint,
@@ -80,6 +84,13 @@ export const TaskService = {
     }
 
     return data || []
+  },
+
+  async getTasks(): Promise<Task[]> {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error('No authenticated user')
+    
+    return this.getTasksByUser(user.id)
   },
 
   async createTask(task: TaskInsert): Promise<Task> {

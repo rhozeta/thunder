@@ -831,3 +831,5 @@ export function TaskSidebar({ task, isOpen, onClose, onSave, onDelete }: TaskSid
     </>
   )
 }
+
+export default TaskSidebar

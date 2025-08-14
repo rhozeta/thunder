@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { Task } from '@/types/task'
 import StatsOverview from '@/components/dashboard/StatsOverview'
@@ -31,61 +31,75 @@ import {
   useSortable,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { GripVertical } from 'lucide-react'
+import { GripVertical, Move3D } from 'lucide-react'
 
-const DEFAULT_SECTIONS: DashboardSection[] = [
+// Extended DashboardSection interface with size support
+interface ExtendedDashboardSection extends DashboardSection {
+  size?: 'small' | 'medium' | 'large' // small=1 col, medium=2 cols, large=3 cols
+}
+
+const DEFAULT_SECTIONS: ExtendedDashboardSection[] = [
   {
     id: 'stats',
     name: 'Statistics Overview',
     description: 'Key metrics and performance indicators',
-    enabled: true
+    enabled: true,
+    size: 'large'
   },
   {
     id: 'priority',
     name: 'Priority Actions',
     description: 'Urgent tasks and quick actions',
-    enabled: true
+    enabled: true,
+    size: 'medium'
   },
   {
     id: 'pipeline',
     name: 'Pipeline Insights',
     description: 'Deal pipeline and revenue forecasts',
-    enabled: true
+    enabled: true,
+    size: 'large'
   },
   {
     id: 'tasks',
     name: 'Task Management',
     description: 'Task overview and productivity metrics',
-    enabled: true
+    enabled: true,
+    size: 'medium'
   },
   {
     id: 'communication',
     name: 'Communication Center',
     description: 'Recent communications and follow-ups',
-    enabled: true
+    enabled: true,
+    size: 'medium'
   },
   {
     id: 'insights',
     name: 'Smart Insights',
     description: 'AI-powered recommendations and analytics',
-    enabled: true
+    enabled: true,
+    size: 'large'
   },
   {
     id: 'navigation',
     name: 'Quick Navigation',
     description: 'Fast access to main CRM sections',
-    enabled: true
+    enabled: true,
+    size: 'large'
   }
 ]
 
-// Draggable Section Component
+// Draggable Section Component with Resize Support
 interface DraggableSectionProps {
   id: string
   children: React.ReactNode
+  size: 'small' | 'medium' | 'large'
+  onSizeChange: (id: string, newSize: 'small' | 'medium' | 'large') => void
   className?: string
 }
 
-function DraggableSection({ id, children, className = '' }: DraggableSectionProps) {
+function DraggableSection({ id, children, size, onSizeChange, className = '' }: DraggableSectionProps) {
   const {
     attributes,
     listeners,
@@ -95,19 +109,87 @@ function DraggableSection({ id, children, className = '' }: DraggableSectionProp
     isDragging,
   } = useSortable({ id })
 
+  const [isResizing, setIsResizing] = useState(false)
+
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
+  }
+
+  // Get grid column classes based on size with responsive design
+  const getSizeClass = (size: 'small' | 'medium' | 'large') => {
+    switch (size) {
+      case 'small': return 'col-span-1'
+      case 'medium': return 'col-span-1 md:col-span-1 lg:col-span-2'
+      case 'large': return 'col-span-1 md:col-span-2 lg:col-span-3'
+      default: return 'col-span-1'
+    }
+  }
+
+  // Enhanced resize handler - allows multi-level size changes based on drag distance
+  const handleResizeStart = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    
+    console.log('Resize start triggered', { currentSize: size }) // Debug log
+    setIsResizing(true)
+    
+    let startX = e.clientX
+    let initialSize = size
+    
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      const deltaX = moveEvent.clientX - startX
+      const smallThreshold = 80   // Small drag distance
+      const largeThreshold = 160  // Large drag distance
+      
+      let newSize: 'small' | 'medium' | 'large' = initialSize
+      
+      if (deltaX > largeThreshold) {
+        // Large drag right - go to largest size
+        newSize = 'large'
+      } else if (deltaX > smallThreshold) {
+        // Medium drag right - increase size
+        if (initialSize === 'small') newSize = 'medium'
+        else if (initialSize === 'medium') newSize = 'large'
+        else newSize = 'large' // Already large, stay large
+      } else if (deltaX < -largeThreshold) {
+        // Large drag left - go to smallest size
+        newSize = 'small'
+      } else if (deltaX < -smallThreshold) {
+        // Medium drag left - decrease size
+        if (initialSize === 'large') newSize = 'medium'
+        else if (initialSize === 'medium') newSize = 'small'
+        else newSize = 'small' // Already small, stay small
+      }
+      
+      if (newSize !== size) {
+        console.log('Size changing from', size, 'to', newSize, 'deltaX:', deltaX) // Debug log
+        onSizeChange(id, newSize)
+      }
+    }
+    
+    const handleMouseUp = () => {
+      setIsResizing(false)
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+    }
+    
+    document.addEventListener('mousemove', handleMouseMove)
+    document.addEventListener('mouseup', handleMouseUp)
   }
 
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={`relative group ${className} ${isDragging ? 'z-50 opacity-75' : ''}`}
+      className={`relative group ${getSizeClass(size)} ${className} ${
+        isDragging ? 'z-50 opacity-75' : ''
+      } ${
+        isResizing ? 'ring-2 ring-blue-400 ring-opacity-50 z-40' : ''
+      } transition-all duration-200`}
       {...attributes}
     >
-      {/* Drag Handle */}
+      {/* Drag Handle - Top Right */}
       <div
         {...listeners}
         className="absolute top-2 right-2 p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing bg-white shadow-sm border border-gray-200 hover:bg-gray-50 z-10"
@@ -115,6 +197,44 @@ function DraggableSection({ id, children, className = '' }: DraggableSectionProp
       >
         <GripVertical className="w-4 h-4 text-gray-400" />
       </div>
+
+      {/* Resize Handle - Bottom Right */}
+      <div
+        onMouseDown={handleResizeStart}
+        className={`absolute bottom-2 right-2 p-1 rounded transition-all duration-200 bg-white shadow-sm border border-gray-200 hover:bg-gray-50 z-10 ${
+          isResizing 
+            ? 'cursor-col-resize opacity-100 bg-blue-50 border-blue-300' 
+            : 'cursor-col-resize opacity-0 group-hover:opacity-100'
+        }`}
+        title={`Drag to resize (currently ${size})`}
+      >
+        <Move3D className={`w-4 h-4 ${isResizing ? 'text-blue-600' : 'text-gray-400'}`} />
+      </div>
+
+      {/* Size indicator */}
+      <div className={`absolute bottom-2 left-2 transition-opacity duration-200 ${
+        isResizing ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+      }`}>
+        <span className={`text-xs px-2 py-1 rounded shadow-sm border ${
+          isResizing 
+            ? 'bg-blue-50 text-blue-700 border-blue-200' 
+            : 'bg-white text-gray-400 border-gray-200'
+        }`}>
+          {size}
+        </span>
+      </div>
+
+      {/* Resize preview overlay */}
+      {isResizing && (
+        <div className="absolute inset-0 bg-blue-50 bg-opacity-20 border-2 border-blue-300 border-dashed rounded-lg pointer-events-none z-5">
+          <div className="absolute inset-0 flex items-center justify-center">
+            <span className="bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-medium">
+              Resizing to {size}
+            </span>
+          </div>
+        </div>
+      )}
+
       {children}
     </div>
   )
@@ -123,7 +243,7 @@ function DraggableSection({ id, children, className = '' }: DraggableSectionProp
 export default function DashboardHome() {
   const { user } = useAuth()
   const router = useRouter()
-  const [dashboardSections, setDashboardSections] = useState<DashboardSection[]>(DEFAULT_SECTIONS)
+  const [dashboardSections, setDashboardSections] = useState<ExtendedDashboardSection[]>(DEFAULT_SECTIONS)
   const [sectionOrder, setSectionOrder] = useState<string[]>(['stats', 'priority', 'pipeline', 'tasks', 'communication', 'insights', 'navigation'])
   const [taskSidebarOpen, setTaskSidebarOpen] = useState(false)
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
@@ -165,7 +285,16 @@ export default function DashboardHome() {
   }, [])
 
   const handleSectionsChange = (sections: DashboardSection[]) => {
-    setDashboardSections(sections)
+    setDashboardSections(sections as ExtendedDashboardSection[])
+  }
+
+  const handleSizeChange = (sectionId: string, newSize: 'small' | 'medium' | 'large') => {
+    const updatedSections = dashboardSections.map(section =>
+      section.id === sectionId ? { ...section, size: newSize } : section
+    )
+    setDashboardSections(updatedSections)
+    // Save to localStorage
+    localStorage.setItem('dashboardSections', JSON.stringify(updatedSections))
   }
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -218,28 +347,31 @@ export default function DashboardHome() {
   const renderSection = (sectionId: string) => {
     if (!isSectionEnabled(sectionId)) return null
 
+    const section = dashboardSections.find(s => s.id === sectionId)
+    const sectionSize = section?.size || 'medium'
+
     const sectionContent = () => {
       switch (sectionId) {
         case 'stats':
           return (
-            <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
-              <div className="px-6 py-4 border-b border-gray-200">
+            <div className="bg-white rounded-lg border border-gray-200 shadow-sm h-full flex flex-col">
+              <div className="px-6 py-4 border-b border-gray-200 flex-shrink-0">
                 <h2 className="text-lg font-semibold text-gray-900">Statistics Overview</h2>
                 <p className="text-sm text-gray-600">Key metrics and performance indicators</p>
               </div>
-              <div className="p-6">
+              <div className="p-6 flex-1">
                 <StatsOverview />
               </div>
             </div>
           )
         case 'priority':
           return (
-            <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
-              <div className="px-6 py-4 border-b border-gray-200">
+            <div className="bg-white rounded-lg border border-gray-200 shadow-sm h-full flex flex-col">
+              <div className="px-6 py-4 border-b border-gray-200 flex-shrink-0">
                 <h2 className="text-lg font-semibold text-gray-900">Priority Actions</h2>
                 <p className="text-sm text-gray-600">Urgent tasks and quick actions</p>
               </div>
-              <div className="p-6">
+              <div className="p-6 flex-1">
                 <PriorityActions 
                   onAddTask={handleAddTask}
                   onAddContact={handleAddContact}
@@ -250,85 +382,90 @@ export default function DashboardHome() {
           )
         case 'pipeline':
           return (
-            <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
-              <div className="px-6 py-4 border-b border-gray-200">
+            <div className="bg-white rounded-lg border border-gray-200 shadow-sm h-full flex flex-col">
+              <div className="px-6 py-4 border-b border-gray-200 flex-shrink-0">
                 <h2 className="text-lg font-semibold text-gray-900">Pipeline Insights</h2>
                 <p className="text-sm text-gray-600">Deal pipeline and revenue forecasts</p>
               </div>
-              <div className="p-6">
+              <div className="p-6 flex-1">
                 <PipelineInsights />
               </div>
             </div>
           )
         case 'tasks':
           return (
-            <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
-              <div className="px-6 py-4 border-b border-gray-200">
+            <div className="bg-white rounded-lg border border-gray-200 shadow-sm h-full flex flex-col">
+              <div className="px-6 py-4 border-b border-gray-200 flex-shrink-0">
                 <h2 className="text-lg font-semibold text-gray-900">Task Management</h2>
                 <p className="text-sm text-gray-600">Task overview and productivity metrics</p>
               </div>
-              <div className="p-6">
+              <div className="p-6 flex-1">
                 <TaskManagementHub onAddTask={handleAddTask} />
               </div>
             </div>
           )
         case 'communication':
           return (
-            <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
-              <div className="px-6 py-4 border-b border-gray-200">
+            <div className="bg-white rounded-lg border border-gray-200 shadow-sm h-full flex flex-col">
+              <div className="px-6 py-4 border-b border-gray-200 flex-shrink-0">
                 <h2 className="text-lg font-semibold text-gray-900">Communication Center</h2>
                 <p className="text-sm text-gray-600">Recent communications and follow-ups</p>
               </div>
-              <div className="p-6">
+              <div className="p-6 flex-1">
                 <CommunicationCenter />
               </div>
             </div>
           )
         case 'insights':
           return (
-            <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
-              <div className="px-6 py-4 border-b border-gray-200">
+            <div className="bg-white rounded-lg border border-gray-200 shadow-sm h-full flex flex-col">
+              <div className="px-6 py-4 border-b border-gray-200 flex-shrink-0">
                 <h2 className="text-lg font-semibold text-gray-900">Smart Insights</h2>
                 <p className="text-sm text-gray-600">AI-powered recommendations and analytics</p>
               </div>
-              <div className="p-6">
+              <div className="p-6 flex-1">
                 <SmartInsights />
               </div>
             </div>
           )
         case 'navigation':
           return (
-            <div className="bg-white rounded-lg shadow p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Navigation</h3>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                <button
-                  onClick={() => router.push('/dashboard/calendar')}
-                  className="p-4 text-center border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  <div className="text-blue-600 font-medium">Calendar</div>
-                  <div className="text-sm text-gray-600">Schedule & Events</div>
-                </button>
-                <button
-                  onClick={() => router.push('/dashboard/contacts')}
-                  className="p-4 text-center border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  <div className="text-green-600 font-medium">Contacts</div>
-                  <div className="text-sm text-gray-600">Client Management</div>
-                </button>
-                <button
-                  onClick={() => router.push('/dashboard/deals')}
-                  className="p-4 text-center border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  <div className="text-purple-600 font-medium">Deals</div>
-                  <div className="text-sm text-gray-600">Pipeline & Sales</div>
-                </button>
-                <button
-                  onClick={() => router.push('/dashboard/tasks')}
-                  className="p-4 text-center border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  <div className="text-orange-600 font-medium">Tasks</div>
-                  <div className="text-sm text-gray-600">To-Do & Projects</div>
-                </button>
+            <div className="bg-white rounded-lg border border-gray-200 shadow-sm h-full flex flex-col">
+              <div className="px-6 py-4 border-b border-gray-200 flex-shrink-0">
+                <h2 className="text-lg font-semibold text-gray-900">Quick Navigation</h2>
+                <p className="text-sm text-gray-600">Fast access to main CRM sections</p>
+              </div>
+              <div className="p-6 flex-1 flex flex-col">
+                <div className="grid grid-cols-2 gap-4 flex-1">
+                  <button
+                    onClick={() => router.push('/dashboard/calendar')}
+                    className="p-4 text-center border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors flex flex-col justify-center"
+                  >
+                    <div className="text-blue-600 font-medium">Calendar</div>
+                    <div className="text-sm text-gray-600">Schedule & Events</div>
+                  </button>
+                  <button
+                    onClick={() => router.push('/dashboard/contacts')}
+                    className="p-4 text-center border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors flex flex-col justify-center"
+                  >
+                    <div className="text-green-600 font-medium">Contacts</div>
+                    <div className="text-sm text-gray-600">Client Management</div>
+                  </button>
+                  <button
+                    onClick={() => router.push('/dashboard/deals')}
+                    className="p-4 text-center border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors flex flex-col justify-center"
+                  >
+                    <div className="text-purple-600 font-medium">Deals</div>
+                    <div className="text-sm text-gray-600">Pipeline & Sales</div>
+                  </button>
+                  <button
+                    onClick={() => router.push('/dashboard/tasks')}
+                    className="p-4 text-center border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors flex flex-col justify-center"
+                  >
+                    <div className="text-orange-600 font-medium">Tasks</div>
+                    <div className="text-sm text-gray-600">To-Do & Projects</div>
+                  </button>
+                </div>
               </div>
             </div>
           )
@@ -338,7 +475,13 @@ export default function DashboardHome() {
     }
 
     return (
-      <DraggableSection key={sectionId} id={sectionId} className="mb-8">
+      <DraggableSection 
+        key={sectionId} 
+        id={sectionId} 
+        size={sectionSize}
+        onSizeChange={handleSizeChange}
+        className=""
+      >
         {sectionContent()}
       </DraggableSection>
     )
@@ -361,14 +504,16 @@ export default function DashboardHome() {
           </p>
         </div>
 
-        {/* Draggable Dashboard Sections */}
+        {/* Draggable Dashboard Sections - Responsive 3 Column Grid */}
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
           onDragEnd={handleDragEnd}
         >
           <SortableContext items={enabledSections} strategy={verticalListSortingStrategy}>
-            {enabledSections.map(sectionId => renderSection(sectionId))}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 auto-rows-min">
+              {enabledSections.map(sectionId => renderSection(sectionId))}
+            </div>
           </SortableContext>
         </DndContext>
       </div>

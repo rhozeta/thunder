@@ -5,7 +5,7 @@ interface StatusChipProps {
   color: string
   bgColor: string
   textColor: string
-  size?: 'sm' | 'md'
+  size?: 'xs' | 'sm' | 'md'
   className?: string
 }
 
@@ -17,7 +17,9 @@ export function StatusChip({
   size = 'sm',
   className = '' 
 }: StatusChipProps) {
-  const sizeClasses = size === 'sm' 
+  const sizeClasses = size === 'xs'
+    ? 'px-1.5 py-0.5 text-xs'
+    : size === 'sm' 
     ? 'px-2 py-1 text-xs' 
     : 'px-3 py-1.5 text-sm'
 

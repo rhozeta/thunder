@@ -15,7 +15,8 @@ export function getStatusDisplayName(status: TaskStatus): string {
   }
 }
 
-export function getPriorityDisplayName(priority: TaskPriority): string {
+export function getPriorityDisplayName(priority: TaskPriority | undefined | null): string {
+  if (!priority) return 'No Priority'
   switch (priority) {
     case 'urgent':
       return 'Urgent'
@@ -26,6 +27,6 @@ export function getPriorityDisplayName(priority: TaskPriority): string {
     case 'low':
       return 'Low'
     default:
-      return priority
+      return 'Medium'
   }
 }

@@ -17,9 +17,10 @@ interface CommunicationStats {
 
 interface CommunicationCenterProps {
   onAddCommunication?: () => void
+  size?: 'small' | 'medium' | 'large'
 }
 
-export default function CommunicationCenter({ onAddCommunication }: CommunicationCenterProps) {
+export default function CommunicationCenter({ onAddCommunication, size = 'medium' }: CommunicationCenterProps) {
   const { user } = useAuth()
   const [recentCommunications, setRecentCommunications] = useState<Communication[]>([])
   const [stats, setStats] = useState<CommunicationStats | null>(null)
@@ -123,61 +124,71 @@ export default function CommunicationCenter({ onAddCommunication }: Communicatio
   const followUpSuggestions = getFollowUpSuggestions()
 
   return (
-    <div className="space-y-6">
-      {/* Communication Stats */}
-      <div className="bg-white p-6 rounded-lg shadow">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">Communication Overview</h3>
-          <button
-            onClick={onAddCommunication}
-            className="flex items-center text-blue-600 hover:text-blue-700 text-sm font-medium"
-          >
-            <Plus className="w-4 h-4 mr-1" />
-            Log Communication
-          </button>
+    <div className="space-y-4">
+      {/* Communication Stats - Priority 1: Always show but compact for small */}
+      <div className="bg-white p-4 rounded-lg shadow">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-base font-semibold text-gray-900">Communication Overview</h3>
+          {size !== 'small' && (
+            <button
+              onClick={onAddCommunication}
+              className="flex items-center text-blue-600 hover:text-blue-700 text-xs font-medium"
+            >
+              <Plus className="w-3 h-3 mr-1" />
+              Log
+            </button>
+          )}
         </div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <div className="text-center p-3 bg-blue-50 rounded-lg">
-            <Mail className="w-6 h-6 text-blue-600 mx-auto mb-1" />
-            <p className="text-xl font-bold text-blue-600">{stats?.emailCount || 0}</p>
-            <p className="text-sm text-gray-600">Emails</p>
+        <div className={`grid gap-3 ${
+          size === 'small' ? 'grid-cols-2' : 
+          size === 'medium' ? 'grid-cols-2 lg:grid-cols-4' : 
+          'grid-cols-4'
+        }`}>
+          <div className="text-center p-2 bg-blue-50 rounded-lg">
+            <Mail className={`text-blue-600 mx-auto mb-1 ${size === 'small' ? 'w-4 h-4' : 'w-6 h-6'}`} />
+            <p className={`font-bold text-blue-600 ${size === 'small' ? 'text-lg' : 'text-xl'}`}>{stats?.emailCount || 0}</p>
+            <p className="text-xs text-gray-600">Emails</p>
           </div>
-          <div className="text-center p-3 bg-green-50 rounded-lg">
-            <Phone className="w-6 h-6 text-green-600 mx-auto mb-1" />
-            <p className="text-xl font-bold text-green-600">{stats?.callCount || 0}</p>
-            <p className="text-sm text-gray-600">Calls</p>
+          <div className="text-center p-2 bg-green-50 rounded-lg">
+            <Phone className={`text-green-600 mx-auto mb-1 ${size === 'small' ? 'w-4 h-4' : 'w-6 h-6'}`} />
+            <p className={`font-bold text-green-600 ${size === 'small' ? 'text-lg' : 'text-xl'}`}>{stats?.callCount || 0}</p>
+            <p className="text-xs text-gray-600">Calls</p>
           </div>
-          <div className="text-center p-3 bg-purple-50 rounded-lg">
-            <MessageSquare className="w-6 h-6 text-purple-600 mx-auto mb-1" />
-            <p className="text-xl font-bold text-purple-600">{stats?.noteCount || 0}</p>
-            <p className="text-sm text-gray-600">Notes</p>
-          </div>
-          <div className="text-center p-3 bg-orange-50 rounded-lg">
-            <Clock className="w-6 h-6 text-orange-600 mx-auto mb-1" />
-            <p className="text-xl font-bold text-orange-600">{stats?.todayCount || 0}</p>
-            <p className="text-sm text-gray-600">Today</p>
-          </div>
+          {size !== 'small' && (
+            <>
+              <div className="text-center p-2 bg-purple-50 rounded-lg">
+                <MessageSquare className="w-6 h-6 text-purple-600 mx-auto mb-1" />
+                <p className="text-xl font-bold text-purple-600">{stats?.noteCount || 0}</p>
+                <p className="text-xs text-gray-600">Notes</p>
+              </div>
+              <div className="text-center p-2 bg-orange-50 rounded-lg">
+                <Clock className="w-6 h-6 text-orange-600 mx-auto mb-1" />
+                <p className="text-xl font-bold text-orange-600">{stats?.todayCount || 0}</p>
+                <p className="text-xs text-gray-600">Today</p>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
-      {/* Follow-up Reminders */}
-      {followUpSuggestions.length > 0 && (
-        <div className="bg-white p-6 rounded-lg shadow border-l-4 border-yellow-500">
-          <div className="flex items-center mb-4">
-            <Clock className="w-5 h-5 text-yellow-600 mr-2" />
-            <h3 className="text-lg font-semibold text-gray-900">Follow-up Reminders</h3>
+      {/* Follow-up Reminders - Priority 2: Show for medium+ */}
+      {size !== 'small' && followUpSuggestions.length > 0 && (
+        <div className="bg-white p-4 rounded-lg shadow border-l-4 border-yellow-500">
+          <div className="flex items-center mb-3">
+            <Clock className="w-4 h-4 text-yellow-600 mr-2" />
+            <h3 className="text-base font-semibold text-gray-900">Follow-up Reminders</h3>
           </div>
-          <div className="space-y-3">
-            {followUpSuggestions.map((suggestion, index) => (
-              <div key={index} className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
-                <div>
-                  <p className="font-medium text-gray-900">{suggestion.message}</p>
-                  <p className="text-sm text-gray-600">{suggestion.action}</p>
+          <div className="space-y-2">
+            {followUpSuggestions.slice(0, size === 'medium' ? 1 : 2).map((suggestion, index) => (
+              <div key={index} className="flex items-center justify-between p-2 bg-yellow-50 rounded-lg">
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-gray-900 text-sm truncate">{suggestion.message}</p>
+                  <p className="text-xs text-gray-600">{suggestion.action}</p>
                 </div>
                 <Link
                   href="/dashboard/contacts"
-                  className="text-yellow-600 hover:text-yellow-700 font-medium text-sm"
+                  className="text-yellow-600 hover:text-yellow-700 font-medium text-xs flex-shrink-0"
                 >
                   Review →
                 </Link>

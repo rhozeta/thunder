@@ -121,6 +121,7 @@ export function getStatusDisplayName(status: string): string {
 }
 
 // Get display name for priority
-export function getPriorityDisplayName(priority: string): string {
+export function getPriorityDisplayName(priority: string | undefined | null): string {
+  if (!priority) return 'No Priority'
   return priority.charAt(0).toUpperCase() + priority.slice(1)
 }

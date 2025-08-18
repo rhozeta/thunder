@@ -18,10 +18,11 @@ interface TaskStats {
 }
 
 interface TaskManagementHubProps {
+  size?: 'small' | 'medium' | 'large'
   onAddTask?: () => void
 }
 
-export default function TaskManagementHub({ onAddTask }: TaskManagementHubProps) {
+export default function TaskManagementHub({ size = 'medium', onAddTask }: TaskManagementHubProps) {
   const { user } = useAuth()
   const [taskStats, setTaskStats] = useState<TaskStats | null>(null)
   const [recentTasks, setRecentTasks] = useState<Task[]>([])
@@ -121,64 +122,74 @@ export default function TaskManagementHub({ onAddTask }: TaskManagementHubProps)
   const completionRate = taskStats ? (taskStats.completed / taskStats.total * 100) : 0
 
   return (
-    <div className="space-y-6">
-      {/* Task Statistics */}
-      <div className="bg-white p-6 rounded-lg shadow">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">Task Overview</h3>
+    <div className="space-y-4">
+      {/* Task Statistics - Priority 1: Always show but compact for small */}
+      <div className="bg-white p-4 rounded-lg shadow">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-base font-semibold text-gray-900">Task Overview</h3>
           <Link 
             href="/dashboard/tasks"
-            className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+            className="text-blue-600 hover:text-blue-700 text-xs font-medium"
           >
-            View All Tasks →
+            View All →
           </Link>
         </div>
 
-        {/* Quick Stats */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <div className="text-center p-3 bg-blue-50 rounded-lg">
-            <p className="text-2xl font-bold text-blue-600">{taskStats?.total || 0}</p>
-            <p className="text-sm text-gray-600">Total Tasks</p>
+        {/* Quick Stats - Responsive layout */}
+        <div className={`grid gap-3 mb-4 ${
+          size === 'small' ? 'grid-cols-2' : 
+          size === 'medium' ? 'grid-cols-2 lg:grid-cols-4' : 
+          'grid-cols-4'
+        }`}>
+          <div className="text-center p-2 bg-blue-50 rounded-lg">
+            <p className={`font-bold text-blue-600 ${size === 'small' ? 'text-lg' : 'text-2xl'}`}>{taskStats?.total || 0}</p>
+            <p className="text-xs text-gray-600">Total</p>
           </div>
-          <div className="text-center p-3 bg-green-50 rounded-lg">
-            <p className="text-2xl font-bold text-green-600">{taskStats?.completed || 0}</p>
-            <p className="text-sm text-gray-600">Completed</p>
+          <div className="text-center p-2 bg-green-50 rounded-lg">
+            <p className={`font-bold text-green-600 ${size === 'small' ? 'text-lg' : 'text-2xl'}`}>{taskStats?.completed || 0}</p>
+            <p className="text-xs text-gray-600">Done</p>
           </div>
-          <div className="text-center p-3 bg-orange-50 rounded-lg">
-            <p className="text-2xl font-bold text-orange-600">{taskStats?.pending || 0}</p>
-            <p className="text-sm text-gray-600">Pending</p>
-          </div>
-          <div className="text-center p-3 bg-red-50 rounded-lg">
-            <p className="text-2xl font-bold text-red-600">{taskStats?.overdue || 0}</p>
-            <p className="text-sm text-gray-600">Overdue</p>
-          </div>
+          {size !== 'small' && (
+            <>
+              <div className="text-center p-2 bg-orange-50 rounded-lg">
+                <p className="text-2xl font-bold text-orange-600">{taskStats?.pending || 0}</p>
+                <p className="text-xs text-gray-600">Pending</p>
+              </div>
+              <div className="text-center p-2 bg-red-50 rounded-lg">
+                <p className="text-2xl font-bold text-red-600">{taskStats?.overdue || 0}</p>
+                <p className="text-xs text-gray-600">Overdue</p>
+              </div>
+            </>
+          )}
         </div>
 
-        {/* Completion Rate */}
-        <div className="mb-6">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-gray-700">Completion Rate</span>
-            <span className="text-sm text-gray-600">{completionRate.toFixed(1)}%</span>
+        {/* Completion Rate - Show for medium+ */}
+        {size !== 'small' && (
+          <div className="mb-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-gray-700">Completion Rate</span>
+              <span className="text-sm text-gray-600">{completionRate.toFixed(1)}%</span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2">
+              <div
+                className="bg-green-500 h-2 rounded-full transition-all duration-300"
+                style={{ width: `${completionRate}%` }}
+              ></div>
+            </div>
           </div>
-          <div className="w-full bg-gray-200 rounded-full h-2">
-            <div
-              className="bg-green-500 h-2 rounded-full transition-all duration-300"
-              style={{ width: `${completionRate}%` }}
-            ></div>
-          </div>
-        </div>
+        )}
 
-        {/* Unscheduled Tasks Alert */}
+        {/* Unscheduled Tasks Alert - Always show if exists */}
         {(taskStats?.unscheduled || 0) > 0 && (
-          <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+          <div className="p-2 bg-yellow-50 border border-yellow-200 rounded-lg">
             <div className="flex items-center">
-              <AlertTriangle className="w-4 h-4 text-yellow-600 mr-2" />
-              <span className="text-sm font-medium text-yellow-800">
-                {taskStats?.unscheduled} unscheduled tasks
+              <AlertTriangle className="w-3 h-3 text-yellow-600 mr-2" />
+              <span className="text-xs font-medium text-yellow-800">
+                {taskStats?.unscheduled} unscheduled
               </span>
               <Link
                 href="/dashboard/tasks?filter=unscheduled"
-                className="ml-auto text-yellow-600 hover:text-yellow-700 text-sm font-medium"
+                className="ml-auto text-yellow-600 hover:text-yellow-700 text-xs font-medium"
               >
                 Schedule →
               </Link>
@@ -187,27 +198,27 @@ export default function TaskManagementHub({ onAddTask }: TaskManagementHubProps)
         )}
       </div>
 
-      {/* Task Types Breakdown */}
-      {taskStats && Object.keys(taskStats.typeBreakdown).length > 0 && (
-        <div className="bg-white p-6 rounded-lg shadow">
-          <div className="flex items-center mb-4">
-            <BarChart3 className="w-5 h-5 text-purple-600 mr-2" />
-            <h3 className="text-lg font-semibold text-gray-900">Task Categories</h3>
+      {/* Task Types Breakdown - Priority 2: Show for medium+ */}
+      {size !== 'small' && taskStats && Object.keys(taskStats.typeBreakdown).length > 0 && (
+        <div className="bg-white p-4 rounded-lg shadow">
+          <div className="flex items-center mb-3">
+            <BarChart3 className="w-4 h-4 text-purple-600 mr-2" />
+            <h3 className="text-base font-semibold text-gray-900">Task Categories</h3>
           </div>
           <div className="space-y-2">
             {Object.entries(taskStats.typeBreakdown)
               .sort(([,a], [,b]) => b - a)
-              .slice(0, 5)
+              .slice(0, size === 'medium' ? 3 : 5)
               .map(([type, count]) => {
                 const percentage = (count / taskStats.total) * 100
                 return (
                   <div key={type} className="flex items-center">
-                    <div className="w-24 text-sm text-gray-600 text-right mr-3 truncate">
+                    <div className="w-20 text-xs text-gray-600 text-right mr-2 truncate">
                       {type}
                     </div>
-                    <div className="flex-1 bg-gray-200 rounded-full h-4 relative">
+                    <div className="flex-1 bg-gray-200 rounded-full h-3 relative">
                       <div
-                        className="bg-purple-500 h-4 rounded-full transition-all duration-300 flex items-center justify-between px-2"
+                        className="bg-purple-500 h-3 rounded-full transition-all duration-300 flex items-center justify-between px-2"
                         style={{ width: `${Math.max(percentage, 10)}%` }}
                       >
                         <span className="text-white text-xs font-medium">
@@ -215,7 +226,7 @@ export default function TaskManagementHub({ onAddTask }: TaskManagementHubProps)
                         </span>
                       </div>
                     </div>
-                    <div className="w-12 text-sm text-gray-600 text-right ml-3">
+                    <div className="w-8 text-xs text-gray-600 text-right ml-2">
                       {percentage.toFixed(0)}%
                     </div>
                   </div>
@@ -225,74 +236,76 @@ export default function TaskManagementHub({ onAddTask }: TaskManagementHubProps)
         </div>
       )}
 
-      {/* Recent Tasks */}
-      <div className="bg-white p-6 rounded-lg shadow">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">Recent Tasks</h3>
-          <button
-            onClick={onAddTask}
-            className="flex items-center text-blue-600 hover:text-blue-700 text-sm font-medium"
-          >
-            <Plus className="w-4 h-4 mr-1" />
-            Add Task
-          </button>
-        </div>
-
-        {recentTasks.length > 0 ? (
-          <div className="space-y-3">
-            {recentTasks.map((task) => (
-              <div key={task.id} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                <div className="flex items-center space-x-3 flex-1">
-                  {getTaskStatusIcon(task)}
-                  <div className="flex-1 min-w-0">
-                    <p className={`font-medium truncate ${getTaskStatusColor(task)}`}>
-                      {task.title}
-                    </p>
-                    <div className="flex items-center space-x-2 text-sm text-gray-500">
-                      <span>{task.type || 'General'}</span>
-                      {task.due_date && (
-                        <>
-                          <span>•</span>
-                          <span>Due: {formatDate(task.due_date)}</span>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-2">
-                  {task.status !== 'completed' && (
-                    <button
-                      onClick={() => handleCompleteTask(task.id)}
-                      className="p-1 text-green-600 hover:text-green-700"
-                      title="Mark as complete"
-                    >
-                      <CheckSquare className="w-4 h-4" />
-                    </button>
-                  )}
-                  <Link
-                    href={`/dashboard/tasks?task=${task.id}`}
-                    className="p-1 text-blue-600 hover:text-blue-700"
-                    title="Edit task"
-                  >
-                    <Clock className="w-4 h-4" />
-                  </Link>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-8">
-            <CheckSquare className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-            <p className="text-gray-500 mb-2">No tasks yet</p>
+      {/* Recent Tasks - Priority 3: Show for large or if no other content */}
+      {(size === 'large' || (size === 'medium' && (!taskStats || Object.keys(taskStats.typeBreakdown).length === 0))) && (
+        <div className="bg-white p-4 rounded-lg shadow">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-base font-semibold text-gray-900">Recent Tasks</h3>
             <button
               onClick={onAddTask}
-              className="text-blue-600 hover:text-blue-700 font-medium"
+              className="flex items-center text-blue-600 hover:text-blue-700 text-xs font-medium"
             >
-              Create your first task →
+              <Plus className="w-3 h-3 mr-1" />
+              Add Task
             </button>
           </div>
-        )}
-      </div>
+
+          {recentTasks.length > 0 ? (
+            <div className="space-y-2">
+              {recentTasks.slice(0, size === 'medium' ? 2 : 4).map((task) => (
+                <div key={task.id} className="flex items-center justify-between p-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                  <div className="flex items-center space-x-2 flex-1 min-w-0">
+                    {getTaskStatusIcon(task)}
+                    <div className="flex-1 min-w-0">
+                      <p className={`font-medium truncate text-sm ${getTaskStatusColor(task)}`}>
+                        {task.title}
+                      </p>
+                      <div className="flex items-center space-x-2 text-xs text-gray-500">
+                        <span>{task.type || 'General'}</span>
+                        {task.due_date && (
+                          <>
+                            <span>•</span>
+                            <span>Due: {formatDate(task.due_date)}</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-1 flex-shrink-0">
+                    {task.status !== 'completed' && (
+                      <button
+                        onClick={() => handleCompleteTask(task.id)}
+                        className="p-1 text-green-600 hover:text-green-700"
+                        title="Mark as complete"
+                      >
+                        <CheckSquare className="w-3 h-3" />
+                      </button>
+                    )}
+                    <Link
+                      href={`/dashboard/tasks?task=${task.id}`}
+                      className="p-1 text-blue-600 hover:text-blue-700"
+                      title="Edit task"
+                    >
+                      <Clock className="w-3 h-3" />
+                    </Link>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-4">
+              <CheckSquare className="w-6 h-6 text-gray-400 mx-auto mb-1" />
+              <p className="text-gray-500 mb-2 text-sm">No tasks yet</p>
+              <button
+                onClick={onAddTask}
+                className="text-blue-600 hover:text-blue-700 font-medium text-sm"
+              >
+                Create your first task →
+              </button>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }

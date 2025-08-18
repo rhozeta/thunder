@@ -28,6 +28,7 @@ export interface Task {
   created_at: string
   updated_at: string
   completed_at: string | null
+  google_calendar_event_id?: string | null
   // Joined data
   contact?: {
     id: string
@@ -64,4 +65,5 @@ export interface TaskUpdate {
   deal_id?: string | null
   assigned_user_id?: string
   sort_order?: number
+  google_calendar_event_id?: string | null
 }

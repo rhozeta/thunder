@@ -5,13 +5,31 @@ import { Calendar } from '../../../components/calendar/Calendar';
 import { CalendarHeader } from '../../../components/calendar/CalendarHeader';
 import { UnscheduledTasksSidebar } from '../../../components/calendar/UnscheduledTasksSidebar';
 import { TaskSidebar } from '../../../components/tasks/TaskSidebar';
-import { useTasks } from '../../../hooks/useTasks';
 import { Task } from '@/types/task';
+import { Appointment } from '@/types/appointment';
+import { useTasks } from '../../../hooks/useTasks';
+import { useAppointments } from '../../../hooks/useAppointments';
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, closestCenter } from '@dnd-kit/core';
 
 
 export default function CalendarPage() {
   const { tasks, updateTask, deleteTask, loading } = useTasks();
+  const { appointments, updateAppointment, loading: appointmentsLoading } = useAppointments();
+
+  // Debug appointments
+  useEffect(() => {
+    console.log('Appointments data:', appointments);
+    console.log('Appointments loading:', appointmentsLoading);
+    if (appointments.length > 0) {
+      console.log('Appointment dates:');
+      appointments.forEach(apt => {
+        console.log(`- ${apt.title}: ${apt.start_datetime} (${new Date(apt.start_datetime)})`);
+      });
+    }
+  }, [appointments, appointmentsLoading]);
+
+  // Use only database appointments
+  const displayAppointments = appointments;
   const [view, setView] = useState<'day' | 'week' | 'month' | '3day'>('week');
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -20,6 +38,8 @@ export default function CalendarPage() {
   const [isUpdating, setIsUpdating] = useState(false);
   const [taskSidebarOpen, setTaskSidebarOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
+  const [isTasksExpanded, setIsTasksExpanded] = useState(false);
 
   const tasksWithDueDates = tasks.filter((task: Task) => task.due_date);
   const unscheduledTasks = tasks.filter((task: Task) => !task.due_date || task.due_date === '');
@@ -59,20 +79,59 @@ export default function CalendarPage() {
     setTaskSidebarOpen(true);
   };
 
-  const handleTaskSave = (updatedTask?: Task) => {
+  const handleTaskSave = (updatedItem?: Task | Appointment) => {
+    if (updatedItem) {
+      if ('due_date' in updatedItem) {
+        // It's a Task - use the updateTask function from useTasks
+        updateTask(updatedItem.id, updatedItem as Task);
+      } else {
+        // It's an Appointment - extract only updatable fields
+        const appointment = updatedItem as Appointment;
+        const updates = {
+          title: appointment.title,
+          description: appointment.description,
+          start_datetime: appointment.start_datetime,
+          end_datetime: appointment.end_datetime,
+          location: appointment.location,
+          appointment_type: appointment.appointment_type,
+          status: appointment.status,
+          contact_id: appointment.contact_id,
+          deal_id: appointment.deal_id,
+          reminder_minutes: appointment.reminder_minutes,
+          notes: appointment.notes,
+          is_recurring: appointment.is_recurring,
+          recurring_pattern: appointment.recurring_pattern
+        };
+        updateAppointment(appointment.id, updates);
+      }
+    }
     setTaskSidebarOpen(false);
     setSelectedTask(null);
-    // Task updates are handled by optimistic updates in useTasks
+    setSelectedAppointment(null);
   };
 
-  const handleTaskDelete = async (taskId: string) => {
-    await deleteTask(taskId);
+  const handleTaskDelete = async (id: string, type?: 'task' | 'appointment') => {
+    if (type === 'task' || !type) {
+      await deleteTask(id);
+    }
+    // For appointments, deletion is handled by TaskSidebar
     setTaskSidebarOpen(false);
     setSelectedTask(null);
+    setSelectedAppointment(null);
   };
 
-  const handleEditTask = (task: Task) => {
-    setSelectedTask(task);
+  const handleEditTask = (item: Task | Appointment | undefined) => {
+    if (item && 'due_date' in item) {
+      const task = item as Task;
+      setSelectedTask(task);
+      setSelectedAppointment(null); // Clear appointment selection when editing task
+      setTaskSidebarOpen(true);
+    }
+  };
+
+  const handleEditAppointment = (appointment: Appointment) => {
+    setSelectedAppointment(appointment);
+    setSelectedTask(null); // Clear task selection when editing appointment
     setTaskSidebarOpen(true);
   };
 
@@ -92,60 +151,79 @@ export default function CalendarPage() {
             view={view} 
             setView={setView} 
             selectedDate={selectedDate} 
-            onDateSelect={setSelectedDate} 
+            onDateSelect={setSelectedDate}
           />
-          <div className="flex-1 overflow-hidden p-4">
+          <div className="flex-1 overflow-auto">
             <Calendar
-              tasks={tasksWithDueDates}
               view={view}
               selectedDate={selectedDate}
+              tasks={tasksWithDueDates}
+              appointments={displayAppointments}
               onDateSelect={setSelectedDate}
               onEditTask={handleEditTask}
+              onEditAppointment={handleEditAppointment}
+              onUpdateAppointment={updateAppointment}
+              isTasksExpanded={isTasksExpanded}
+              onToggleTasksExpansion={() => setIsTasksExpanded(!isTasksExpanded)}
             />
           </div>
         </div>
         
         {sidebarOpen && (
           <div className="flex-shrink-0 h-full bg-white border-l border-gray-200 transition-all duration-300" style={{width: sidebarCollapsed ? '48px' : '320px'}}>
-            <UnscheduledTasksSidebar
-              tasks={unscheduledTasks}
-              isOpen={sidebarOpen}
-              onToggle={() => setSidebarOpen(!sidebarOpen)}
-              onAddTask={handleAddTask}
-              onCollapsedChange={setSidebarCollapsed}
-              onEditTask={handleEditTask}
-            />
+            <div className="h-full flex flex-col">
+              <div className="flex-1">
+                <UnscheduledTasksSidebar 
+                  tasks={unscheduledTasks}
+                  isOpen={sidebarOpen}
+                  onToggle={() => setSidebarOpen(!sidebarOpen)}
+                  onAddTask={handleAddTask}
+                  onCollapsedChange={setSidebarCollapsed}
+                  onEditTask={handleEditTask}
+                />
+              </div>
+            </div>
           </div>
         )}
 
         <TaskSidebar
           task={selectedTask}
+          appointment={selectedAppointment}
           isOpen={taskSidebarOpen}
-          onClose={() => setTaskSidebarOpen(false)}
+          onClose={() => {
+            setTaskSidebarOpen(false);
+            setSelectedTask(null);
+            setSelectedAppointment(null);
+          }}
           onSave={handleTaskSave}
           onDelete={handleTaskDelete}
         />
         
         <DragOverlay dropAnimation={null}>
           {activeTask ? (
-            <div className="bg-white shadow-2xl rounded-lg p-4 border border-blue-500 transform rotate-3 opacity-90">
-              <div className="flex items-center justify-between">
-                <h4 className="font-medium text-sm text-gray-900">{activeTask.title}</h4>
-                {isUpdating && (
-                  <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                )}
-              </div>
-              <p className="text-xs text-gray-600 mt-1">
-                {activeTask.type || 'No type'}
-              </p>
-              <div className="mt-2 flex items-center space-x-1">
-                <div className={`w-2 h-2 rounded-full ${
+            <div className="bg-white border border-gray-200 rounded px-2 py-1 text-xs leading-none shadow-lg border-blue-400 flex items-center justify-between gap-2" style={{ height: '24px', minHeight: '24px', maxHeight: '24px', padding: '2px 8px', fontSize: '12px', lineHeight: '16px', boxSizing: 'border-box' }}>
+              <div className="flex items-center gap-1.5 min-w-0 flex-1" style={{ height: '16px', lineHeight: '16px' }}>
+                <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
                   activeTask.priority === 'urgent' ? 'bg-red-500' :
                   activeTask.priority === 'high' ? 'bg-orange-500' :
                   activeTask.priority === 'medium' ? 'bg-yellow-500' :
                   'bg-green-500'
                 }`} />
-                <span className="text-xs text-gray-500 capitalize">{activeTask.priority}</span>
+                <span className="text-gray-900 truncate font-medium" style={{ height: '16px', lineHeight: '16px' }}>
+                  {activeTask.title}
+                </span>
+              </div>
+              
+              <div 
+                className={`text-xs px-1.5 py-0.5 rounded whitespace-nowrap flex-shrink-0 ${
+                  activeTask.status === 'completed' ? 'bg-green-100 text-green-700' :
+                  activeTask.status === 'in_progress' ? 'bg-blue-100 text-blue-700' :
+                  activeTask.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                  'bg-gray-100 text-gray-700'
+                }`}
+                style={{ height: '16px', lineHeight: '16px' }}
+              >
+                {activeTask.status ? activeTask.status.replace('_', ' ') : 'No status'}
               </div>
             </div>
           ) : null}

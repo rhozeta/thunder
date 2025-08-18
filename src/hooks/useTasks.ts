@@ -1,11 +1,24 @@
 import { useState, useEffect } from 'react';
 import { Task, TaskUpdate } from '@/types/task';
 import { TaskService } from '@/services/tasks';
+import { GoogleCalendarService } from '@/services/googleCalendar';
+import { supabase } from '@/lib/supabase';
 
 export function useTasks() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+
+  const googleCalendarService = GoogleCalendarService.getInstance();
+
+  useEffect(() => {
+    const getUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUserId(user?.id || null);
+    };
+    getUser();
+  }, []);
 
   const fetchTasks = async () => {
     try {
@@ -23,6 +36,8 @@ export function useTasks() {
   const updateTask = async (taskId: string, updates: TaskUpdate) => {
     // Optimistic update - update UI immediately
     const previousTasks = tasks;
+    const taskToUpdate = tasks.find(t => t.id === taskId);
+    
     setTasks(prev => prev.map(task => 
       task.id === taskId 
         ? { ...task, ...updates, updated_at: new Date().toISOString() }
@@ -31,6 +46,27 @@ export function useTasks() {
 
     try {
       await TaskService.updateTask(taskId, updates);
+      
+      // Sync with Google Calendar if connected
+      if (userId && taskToUpdate) {
+        const updatedTask = { ...taskToUpdate, ...updates };
+        const isConnected = await googleCalendarService.isConnected(userId);
+        
+        if (isConnected) {
+          if (updatedTask.google_calendar_event_id) {
+            await googleCalendarService.updateGoogleCalendarEvent(
+              userId,
+              updatedTask,
+              updatedTask.google_calendar_event_id
+            );
+          } else if (updatedTask.due_date) {
+            const eventId = await googleCalendarService.syncTaskToGoogleCalendar(userId, updatedTask);
+            if (eventId) {
+              await TaskService.updateTask(taskId, { google_calendar_event_id: eventId });
+            }
+          }
+        }
+      }
     } catch (err) {
       // Revert optimistic update on error
       setTasks(previousTasks);

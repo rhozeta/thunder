@@ -17,7 +17,11 @@ interface Insight {
   priority: 'high' | 'medium' | 'low'
 }
 
-export default function SmartInsights() {
+interface SmartInsightsProps {
+  size?: 'small' | 'medium' | 'large'
+}
+
+export default function SmartInsights({ size = 'medium' }: SmartInsightsProps) {
   const { user } = useAuth()
   const [insights, setInsights] = useState<Insight[]>([])
   const [loading, setLoading] = useState(true)

@@ -27,12 +27,12 @@ export async function middleware(request: NextRequest) {
   // Get the session
   const { data: { session } } = await supabase.auth.getSession()
 
-  // Protect dashboard routes and redirect root to login
-  if (!session && (request.nextUrl.pathname === '/' || request.nextUrl.pathname.startsWith('/dashboard'))) {
+  // Protect dashboard routes only (allow unauthenticated access to landing page)
+  if (!session && request.nextUrl.pathname.startsWith('/dashboard')) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  // Redirect authenticated users away from auth pages
+  // Redirect authenticated users to dashboard from root and auth pages
   if (session && (request.nextUrl.pathname === '/' || request.nextUrl.pathname.startsWith('/login') || request.nextUrl.pathname.startsWith('/signup'))) {
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }

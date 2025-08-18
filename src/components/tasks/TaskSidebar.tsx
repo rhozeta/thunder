@@ -2,10 +2,13 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Task, TaskInsert, TaskUpdate, TaskStatus, TaskPriority } from '@/types/task'
+import { Appointment, AppointmentInsert, AppointmentUpdate, AppointmentStatus, AppointmentPriority } from '@/types/appointment'
 import { TaskService } from '@/services/tasks'
+import { AppointmentService } from '@/services/appointments'
 import { ContactService } from '@/services/contacts'
 import { DealService } from '@/services/deals'
 import { TaskTypesService } from '@/services/taskTypes'
+import { AppointmentTypesService } from '@/services/appointmentTypes'
 import { useAuth } from '@/contexts/AuthContext'
 import { CustomDropdown } from '@/components/ui/CustomDropdown'
 import { ChipSelector } from '@/components/ui/ChipSelector'
@@ -22,29 +25,39 @@ import {
 import { 
   X, 
   Calendar, 
-  User, 
-  Briefcase, 
+  Clock, 
+  MapPin, 
+  Bell, 
   Flag, 
-  Clock,
-  Hash,
+  User, 
+  Building, 
+  CalendarCheck, 
+  Hash, 
+  Bold, 
+  Italic, 
+  List, 
+  ListOrdered, 
+  CheckSquare, 
+  Quote, 
+  Code, 
+  Heading1, 
+  Heading2, 
+  Heading3, 
+  RefreshCw,
   Type,
-  List,
-  CheckSquare,
-  Quote,
-  Code,
-  Image,
-  Link,
   Minus,
-  Trash2
+  Trash2,
+  Briefcase
 } from 'lucide-react'
 import { format } from 'date-fns'
 
 interface TaskSidebarProps {
   task: Task | null
+  appointment?: Appointment | null
   isOpen: boolean
   onClose: () => void
-  onSave: (updatedTask?: Task) => void
-  onDelete?: (taskId: string) => void
+  onSave: (updatedItem?: Task | Appointment) => void
+  onDelete?: (id: string, type?: 'task' | 'appointment') => void
 }
 
 interface Contact {
@@ -66,21 +79,31 @@ interface SlashCommand {
   action: (editor: HTMLTextAreaElement) => void
 }
 
-export function TaskSidebar({ task, isOpen, onClose, onSave, onDelete }: TaskSidebarProps) {
+export function TaskSidebar({ task, appointment, isOpen, onClose, onSave, onDelete }: TaskSidebarProps) {
   const { user } = useAuth()
+  const [isAppointment, setIsAppointment] = useState(!!appointment)
   const [formData, setFormData] = useState({
     title: '',
     description: '',
     due_date: '' as string | null,
+    start_datetime: '',
+    end_datetime: '' as string | null,
+    location: '',
     priority: 'medium' as TaskPriority,
-    status: 'pending' as TaskStatus,
+    status: 'pending' as TaskStatus | AppointmentStatus,
     type: '',
     contact_id: '',
-    deal_id: ''
+    deal_id: '',
+    reminder_minutes: 15,
+    notes: '',
+    is_recurring: false,
+    recurring_pattern: '',
+    recurring_end_date: '' as string | null
   })
   const [contacts, setContacts] = useState<any[]>([])
   const [deals, setDeals] = useState<any[]>([])
   const [taskTypes, setTaskTypes] = useState<string[]>([])
+  const [appointmentTypes, setAppointmentTypes] = useState<string[]>([])
   const [showAddNewType, setShowAddNewType] = useState(false)
   const [newTypeName, setNewTypeName] = useState('')
   const [loading, setLoading] = useState(false)
@@ -168,6 +191,29 @@ export function TaskSidebar({ task, isOpen, onClose, onSave, onDelete }: TaskSid
     }
   ]
 
+  // Helper function to round datetime to nearest 15 minutes
+  const roundToNearestQuarter = (date: Date) => {
+    const minutes = date.getMinutes()
+    const roundedMinutes = Math.round(minutes / 15) * 15
+    const newDate = new Date(date)
+    newDate.setMinutes(roundedMinutes, 0, 0)
+    return newDate
+  }
+
+  // Helper function to add 30 minutes to a datetime
+  const addThirtyMinutes = (datetimeString: string) => {
+    if (!datetimeString) return null
+    const date = new Date(datetimeString)
+    date.setMinutes(date.getMinutes() + 30)
+    return format(date, "yyyy-MM-dd'T'HH:mm")
+  }
+
+  // Helper function to format datetime for input with 15-minute increments
+  const formatDatetimeForInput = (date: Date) => {
+    const rounded = roundToNearestQuarter(date)
+    return format(rounded, "yyyy-MM-dd'T'HH:mm")
+  }
+
   const insertText = (editor: HTMLTextAreaElement, text: string) => {
     const start = editor.selectionStart
     const end = editor.selectionEnd
@@ -191,40 +237,90 @@ export function TaskSidebar({ task, isOpen, onClose, onSave, onDelete }: TaskSid
 
   useEffect(() => {
     if (task) {
+      setIsAppointment(false)
+      const startDatetime = task.due_date ? `${task.due_date}T09:00` : ''
       const initialData = {
         title: task.title || '',
         description: task.description || '',
-        status: task.status || 'pending' as TaskStatus,
-        priority: task.priority || 'medium' as TaskPriority,
-        due_date: task.due_date ? new Date(task.due_date + 'T00:00:00').toISOString().split('T')[0] : '',
+        due_date: task.due_date || '',
+        start_datetime: startDatetime,
+        end_datetime: startDatetime ? addThirtyMinutes(startDatetime) : null,
+        location: '',
+        priority: (task.priority || 'medium') as TaskPriority,
+        status: (task.status || 'pending') as TaskStatus,
+        type: task.type || '',
         contact_id: task.contact_id || '',
         deal_id: task.deal_id || '',
-        type: task.type || ''
+        reminder_minutes: 15,
+        notes: '',
+        is_recurring: false,
+        recurring_pattern: '',
+        recurring_end_date: null as string | null
+      }
+      setFormData(initialData)
+      lastSavedDataRef.current = JSON.stringify(initialData)
+    } else if (appointment) {
+      setIsAppointment(true)
+      const startDate = appointment.start_datetime ? new Date(appointment.start_datetime) : new Date()
+      const formattedStartDate = formatDatetimeForInput(startDate)
+      const initialData = {
+        title: appointment.title || '',
+        description: appointment.description || '',
+        due_date: '',
+        start_datetime: formattedStartDate,
+        end_datetime: appointment.end_datetime 
+          ? formatDatetimeForInput(new Date(appointment.end_datetime))
+          : addThirtyMinutes(formattedStartDate),
+        location: appointment.location || '',
+        priority: 'medium' as TaskPriority,
+        status: (appointment.status || 'scheduled') as AppointmentStatus,
+        type: appointment.appointment_type || '',
+        contact_id: appointment.contact_id || '',
+        deal_id: appointment.deal_id || '',
+        reminder_minutes: appointment.reminder_minutes || 15,
+        notes: appointment.notes || '',
+        is_recurring: appointment.is_recurring || false,
+        recurring_pattern: appointment.recurring_pattern || '',
+        recurring_end_date: appointment.recurring_end_date || null
       }
       setFormData(initialData)
       lastSavedDataRef.current = JSON.stringify(initialData)
     } else {
-      const initialData = {
-        title: '',
-        description: '',
-        status: 'pending' as TaskStatus,
-        priority: 'medium' as TaskPriority,
-        due_date: '',
-        contact_id: '',
-        deal_id: '',
-        type: ''
+      // Only reset to task mode if we're not currently in appointment mode
+      // This prevents auto-save from reverting appointment UI back to task UI
+      if (!isAppointment) {
+        setIsAppointment(false)
+        const initialData = {
+          title: '',
+          description: '',
+          due_date: '',
+          start_datetime: '',
+          end_datetime: null as string | null,
+          location: '',
+          priority: 'medium' as TaskPriority,
+          status: 'pending' as TaskStatus,
+          type: '',
+          contact_id: '',
+          deal_id: '',
+          reminder_minutes: 15,
+          notes: '',
+          is_recurring: false,
+          recurring_pattern: '',
+          recurring_end_date: null as string | null
+        }
+        setFormData(initialData)
+        lastSavedDataRef.current = JSON.stringify(initialData)
       }
-      setFormData(initialData)
-      lastSavedDataRef.current = JSON.stringify(initialData)
     }
     setSaveStatus('idle')
-  }, [task])
+  }, [task, appointment, isAppointment])
 
   useEffect(() => {
     if (isOpen && user) {
       loadContacts()
       loadDeals()
       loadTaskTypes()
+      loadAppointmentTypes()
     }
   }, [isOpen, user])
 
@@ -288,9 +384,8 @@ export function TaskSidebar({ task, isOpen, onClose, onSave, onDelete }: TaskSid
   }
 
   const loadTaskTypes = async () => {
-    if (!user) return
     try {
-      const types = await TaskTypesService.getAllTaskTypes(user.id)
+      const types = await TaskTypesService.getAllTaskTypes(user?.id || '00000000-0000-0000-0000-000000000000')
       // Sort task types alphabetically
       const sortedTypes = types.sort((a, b) => a.localeCompare(b))
       setTaskTypes(sortedTypes)
@@ -299,18 +394,32 @@ export function TaskSidebar({ task, isOpen, onClose, onSave, onDelete }: TaskSid
     }
   }
 
+  const loadAppointmentTypes = async () => {
+    try {
+      const data = await AppointmentTypesService.getAppointmentTypes(user?.id || '00000000-0000-0000-0000-000000000000')
+      setAppointmentTypes(data.map(type => type.name))
+    } catch (error) {
+      console.error('Error loading appointment types:', error)
+    }
+  }
+
   const handleAddNewType = async () => {
     if (!user || !newTypeName.trim()) return
     
     try {
-      await TaskTypesService.createCustomTaskType(newTypeName.trim(), user.id)
+      if (isAppointment) {
+        await AppointmentTypesService.createAppointmentType(newTypeName.trim(), user.id)
+        await loadAppointmentTypes()
+      } else {
+        await TaskTypesService.createCustomTaskType(newTypeName.trim(), user.id)
+        await loadTaskTypes()
+      }
       setFormData(prev => ({ ...prev, type: newTypeName.trim() }))
       setNewTypeName('')
       setShowAddNewType(false)
-      await loadTaskTypes() // Reload types to include the new one
     } catch (error) {
-      console.error('Error creating new task type:', error)
-      alert('Failed to create new task type. Please try again.')
+      console.error(`Error creating new ${isAppointment ? 'appointment' : 'task'} type:`, error)
+      alert(`Failed to create new ${isAppointment ? 'appointment' : 'task'} type. Please try again.`)
     }
   }
 
@@ -393,28 +502,58 @@ export function TaskSidebar({ task, isOpen, onClose, onSave, onDelete }: TaskSid
 
     setLoading(true)
     try {
-      const taskData = {
-        ...formData,
-        due_date: formData.due_date || null,
-        type: formData.type || null,
-        contact_id: formData.contact_id || null,
-        deal_id: formData.deal_id || null
-      }
+      if (isAppointment) {
+        const appointmentData = {
+          title: formData.title,
+          description: formData.description || undefined,
+          start_datetime: formData.start_datetime,
+          end_datetime: formData.end_datetime || undefined,
+          location: formData.location || undefined,
+          appointment_type: formData.type || undefined,
+          status: formData.status as AppointmentStatus,
+          contact_id: formData.contact_id || undefined,
+          deal_id: formData.deal_id || undefined,
+          assigned_user_id: user.id,
+          notes: formData.notes || undefined,
+          reminder_minutes: formData.reminder_minutes,
+          is_recurring: formData.is_recurring,
+          recurring_pattern: formData.recurring_pattern || undefined,
+          recurring_end_date: formData.recurring_end_date || undefined
+        }
 
-      if (task) {
-        await TaskService.updateTask(task.id, taskData)
+        if (appointment) {
+          await AppointmentService.updateAppointment(appointment.id, appointmentData)
+        } else {
+          await AppointmentService.createAppointment(appointmentData as AppointmentInsert)
+        }
       } else {
-        await TaskService.createTask({
-          ...taskData,
-          assigned_user_id: user.id
-        })
+        const taskData = {
+          title: formData.title,
+          description: formData.description || null,
+          due_date: formData.due_date || null,
+          priority: formData.priority as TaskPriority,
+          status: formData.status as TaskStatus,
+          type: formData.type || null,
+          contact_id: formData.contact_id || null,
+          deal_id: formData.deal_id || null
+        }
+
+        if (task) {
+          await TaskService.updateTask(task.id, taskData)
+        } else {
+          await TaskService.createTask({
+            ...taskData,
+            assigned_user_id: user.id,
+            sort_order: Math.floor(Date.now() / 1000)
+          })
+        }
       }
 
       onSave()
       onClose()
     } catch (error) {
-      console.error('Error saving task:', error)
-      alert('Failed to save task. Please try again.')
+      console.error(`Error saving ${isAppointment ? 'appointment' : 'task'}:`, error)
+      alert(`Failed to save ${isAppointment ? 'appointment' : 'task'}. Please try again.`)
     } finally {
       setLoading(false)
     }
@@ -429,63 +568,117 @@ export function TaskSidebar({ task, isOpen, onClose, onSave, onDelete }: TaskSid
     
     setSaveStatus('saving')
     try {
-      if (task) {
-        // Update existing task
-        const updateData: TaskUpdate = {
-          title: data.title,
-          description: data.description || undefined,
-          status: data.status,
-          priority: data.priority,
-          due_date: data.due_date || undefined,
-          contact_id: data.contact_id || undefined,
-          deal_id: data.deal_id || undefined,
-          type: data.type || undefined
+      if (isAppointment) {
+        if (appointment) {
+          // Update existing appointment
+          const updateData: AppointmentUpdate = {
+            title: data.title,
+            description: data.description || undefined,
+            start_datetime: data.start_datetime,
+            end_datetime: data.end_datetime || undefined,
+            location: data.location || undefined,
+            appointment_type: data.type || undefined,
+            status: data.status as AppointmentStatus,
+            contact_id: data.contact_id || undefined,
+            deal_id: data.deal_id || undefined,
+            notes: data.notes || undefined,
+            reminder_minutes: data.reminder_minutes,
+            is_recurring: data.is_recurring,
+            recurring_pattern: data.recurring_pattern || undefined,
+            recurring_end_date: data.recurring_end_date || undefined
+          }
+          const updatedAppointment = await AppointmentService.updateAppointment(appointment.id, updateData)
+          lastSavedDataRef.current = currentDataString
+          setSaveStatus('saved')
+          
+          // Create optimistic update object
+          const optimisticAppointment = {
+            ...appointment,
+            ...updateData,
+            updated_at: new Date().toISOString()
+          }
+          onSave(optimisticAppointment)
+          
+          // Clear saved status after 2 seconds
+          setTimeout(() => setSaveStatus('idle'), 2000)
+        } else {
+          // Create new appointment
+          const insertData: AppointmentInsert = {
+            title: data.title,
+            description: data.description || null,
+            start_datetime: data.start_datetime,
+            end_datetime: data.end_datetime || null,
+            location: data.location || null,
+            appointment_type: data.type || null,
+            status: data.status as AppointmentStatus,
+            contact_id: data.contact_id || null,
+            deal_id: data.deal_id || null,
+            assigned_user_id: user.id,
+            notes: data.notes || null,
+            reminder_minutes: data.reminder_minutes,
+            is_recurring: data.is_recurring,
+            recurring_pattern: data.recurring_pattern || null,
+            recurring_end_date: data.recurring_end_date || null
+          }
+          const newAppointment = await AppointmentService.createAppointment(insertData)
+          lastSavedDataRef.current = currentDataString
+          setSaveStatus('saved')
+          onSave(newAppointment)
         }
-        const updatedTask = await TaskService.updateTask(task.id, updateData)
-        lastSavedDataRef.current = currentDataString
-        setSaveStatus('saved')
-        
-        // Create optimistic update object
-        const optimisticTask = {
-          ...task,
-          ...updateData,
-          updated_at: new Date().toISOString()
-        }
-        onSave(optimisticTask) // Pass updated task for optimistic update
-        
-        // Clear saved status after 2 seconds
-        setTimeout(() => setSaveStatus('idle'), 2000)
       } else {
-        // For new tasks, we'll save on first meaningful input
-        // Get current task count to determine next sort order
-        const allTasks = await TaskService.getTasks()
-        const maxSortOrder = allTasks.length > 0 ? Math.max(...allTasks.map(t => t.sort_order || 0)) : 0
-        
-        const insertData: TaskInsert = {
-          title: data.title,
-          description: data.description || null,
-          status: data.status,
-          priority: data.priority,
-          due_date: data.due_date || null,
-          contact_id: data.contact_id || null,
-          deal_id: data.deal_id || null,
-          type: data.type || null,
-          assigned_user_id: user.id,
-          sort_order: maxSortOrder + 1 // Simple incremental sort order
+        if (task) {
+          // Update existing task
+          const updateData: TaskUpdate = {
+            title: data.title,
+            description: data.description || undefined,
+            status: data.status as TaskStatus,
+            priority: data.priority as TaskPriority,
+            due_date: data.due_date || undefined,
+            contact_id: data.contact_id || undefined,
+            deal_id: data.deal_id || undefined,
+            type: data.type || undefined
+          }
+          const updatedTask = await TaskService.updateTask(task.id, updateData)
+          lastSavedDataRef.current = currentDataString
+          setSaveStatus('saved')
+          
+          // Create optimistic update object
+          const optimisticTask = {
+            ...task,
+            ...updateData,
+            updated_at: new Date().toISOString()
+          }
+          onSave(optimisticTask)
+          
+          // Clear saved status after 2 seconds
+          setTimeout(() => setSaveStatus('idle'), 2000)
+        } else {
+          // Create new task
+          const insertData: TaskInsert = {
+            title: data.title,
+            description: data.description || null,
+            status: data.status as TaskStatus,
+            priority: data.priority as TaskPriority,
+            due_date: data.due_date || null,
+            contact_id: data.contact_id || null,
+            deal_id: data.deal_id || null,
+            type: data.type || null,
+            assigned_user_id: user.id,
+            sort_order: Math.floor(Date.now() / 1000)
+          }
+          const newTask = await TaskService.createTask(insertData)
+          lastSavedDataRef.current = currentDataString
+          setSaveStatus('saved')
+          onSave(newTask)
         }
-        const newTask = await TaskService.createTask(insertData)
-        lastSavedDataRef.current = currentDataString
-        setSaveStatus('saved')
-        onSave(newTask) // Pass the new task to update the sidebar and refresh the list
-        // Don't close sidebar immediately for new tasks, let user continue editing
       }
     } catch (error) {
-      console.error('Error auto-saving task:', error)
+      console.error('Auto-save error:', error)
       setSaveStatus('error')
       setTimeout(() => setSaveStatus('idle'), 3000)
     }
-  }, [user, task, onSave, onClose])
-  
+  }, [task, appointment, isAppointment, user, onSave])
+
   // Debounced auto-save effect
   useEffect(() => {
     if (saveTimeoutRef.current) {
@@ -571,11 +764,213 @@ export function TaskSidebar({ task, isOpen, onClose, onSave, onDelete }: TaskSid
                 type="text"
                 value={formData.title}
                 onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                placeholder="Task title..."
+                placeholder={`${isAppointment ? 'Appointment' : 'Task'} title...`}
                 className="w-full text-2xl font-semibold border-none outline-none placeholder-gray-400 bg-transparent"
                 required
               />
             </div>
+
+            {/* Appointment Toggle - Only show for new items */}
+            {!task && !appointment && (
+              <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <input
+                  type="checkbox"
+                  id="appointment-toggle"
+                  checked={isAppointment}
+                  onChange={(e) => {
+                    const checked = e.target.checked
+                    setIsAppointment(checked)
+                    
+                    if (checked) {
+                      // Converting to appointment - set default datetime if due_date exists
+                      const defaultStart = formData.due_date 
+                        ? `${formData.due_date}T09:00`
+                        : new Date().toISOString().slice(0, 16)
+                      
+                      setFormData(prev => ({
+                        ...prev,
+                        start_datetime: defaultStart,
+                        status: 'scheduled' as AppointmentStatus,
+                        duration_minutes: 60,
+                        reminder_minutes: 15
+                      }))
+                    } else {
+                      // Converting to task - set due_date from start_datetime if exists
+                      const defaultDueDate = formData.start_datetime 
+                        ? formData.start_datetime.split('T')[0]
+                        : ''
+                      
+                      setFormData(prev => ({
+                        ...prev,
+                        due_date: defaultDueDate,
+                        status: 'pending' as TaskStatus
+                      }))
+                    }
+                  }}
+                  className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                />
+                <label htmlFor="appointment-toggle" className="flex items-center gap-2 text-sm font-medium text-gray-700 cursor-pointer">
+                  <CalendarCheck className="w-4 h-4 text-blue-600" />
+                  Convert to appointment
+                </label>
+              </div>
+            )}
+
+            {/* Date/Time Fields */}
+            {isAppointment ? (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <div className="flex items-center space-x-2 mb-2">
+                      <Calendar className="w-4 h-4 text-gray-400" />
+                      <span className="text-sm text-gray-600">Start Date & Time</span>
+                    </div>
+                    <input
+                      type="datetime-local"
+                      value={formData.start_datetime}
+                      onChange={(e) => {
+                        const newStartDatetime = e.target.value
+                        setFormData(prev => ({ 
+                          ...prev, 
+                          start_datetime: newStartDatetime,
+                          end_datetime: newStartDatetime ? addThirtyMinutes(newStartDatetime) : null
+                        }))
+                      }}
+                      step="900"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <div className="flex items-center space-x-2 mb-2">
+                      <Clock className="w-4 h-4 text-gray-400" />
+                      <span className="text-sm text-gray-600">End Date & Time</span>
+                    </div>
+                    <input
+                      type="datetime-local"
+                      value={formData.end_datetime || ''}
+                      onChange={(e) => setFormData(prev => ({ ...prev, end_datetime: e.target.value || null }))}
+                      step="900"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+
+                
+                <div>
+                  <div className="flex items-center space-x-2 mb-2">
+                    <MapPin className="w-4 h-4 text-gray-400" />
+                    <span className="text-sm text-gray-600">Location</span>
+                  </div>
+                  <input
+                    type="text"
+                    value={formData.location}
+                    onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
+                    placeholder="Meeting location..."
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+
+                {/* Recurring Appointment Settings */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="checkbox"
+                      id="recurring-toggle"
+                      checked={formData.is_recurring}
+                      onChange={(e) => {
+                        const checked = e.target.checked
+                        setFormData(prev => ({
+                          ...prev,
+                          is_recurring: checked,
+                          recurring_pattern: checked ? 'weekly' : '',
+                          recurring_end_date: checked ? '' : null
+                        }))
+                      }}
+                      className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                    />
+                    <label htmlFor="recurring-toggle" className="flex items-center gap-2 text-sm font-medium text-gray-700 cursor-pointer">
+                      <RefreshCw className="w-4 h-4 text-blue-600" />
+                      Recurring appointment
+                    </label>
+                  </div>
+
+                  {formData.is_recurring && (
+                    <div className="pl-7 space-y-4 border-l-2 border-blue-100">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <div className="flex items-center space-x-2 mb-2">
+                            <RefreshCw className="w-4 h-4 text-gray-400" />
+                            <span className="text-sm text-gray-600">Repeat</span>
+                          </div>
+                          <select
+                            value={formData.recurring_pattern}
+                            onChange={(e) => setFormData(prev => ({ ...prev, recurring_pattern: e.target.value }))}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          >
+                            <option value="daily">Daily</option>
+                            <option value="weekly">Weekly</option>
+                            <option value="biweekly">Every 2 weeks</option>
+                            <option value="monthly">Monthly</option>
+                            <option value="quarterly">Quarterly</option>
+                            <option value="yearly">Yearly</option>
+                          </select>
+                        </div>
+                        <div>
+                          <div className="flex items-center space-x-2 mb-2">
+                            <Calendar className="w-4 h-4 text-gray-400" />
+                            <span className="text-sm text-gray-600">End Date</span>
+                          </div>
+                          <input
+                            type="date"
+                            value={formData.recurring_end_date || ''}
+                            onChange={(e) => setFormData(prev => ({ ...prev, recurring_end_date: e.target.value || null }))}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            min={formData.start_datetime ? formData.start_datetime.split('T')[0] : ''}
+                          />
+                        </div>
+                      </div>
+                      <div className="text-xs text-gray-500 bg-blue-50 p-2 rounded">
+                        <strong>Note:</strong> Recurring appointments will be automatically created based on your selected pattern until the end date.
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <div className="flex items-center space-x-2 mb-2">
+                    <Bell className="w-4 h-4 text-gray-400" />
+                    <span className="text-sm text-gray-600">Reminder</span>
+                  </div>
+                  <select
+                    value={formData.reminder_minutes}
+                    onChange={(e) => setFormData(prev => ({ ...prev, reminder_minutes: parseInt(e.target.value) }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value={0}>No reminder</option>
+                    <option value={5}>5 minutes before</option>
+                    <option value={15}>15 minutes before</option>
+                    <option value={30}>30 minutes before</option>
+                    <option value={60}>1 hour before</option>
+                    <option value={120}>2 hours before</option>
+                    <option value={1440}>1 day before</option>
+                  </select>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <div className="flex items-center space-x-2 mb-2">
+                  <Calendar className="w-4 h-4 text-gray-400" />
+                  <span className="text-sm text-gray-600">Due Date</span>
+                </div>
+                <input
+                  type="date"
+                  value={formData.due_date || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, due_date: e.target.value || null }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+            )}
 
             {/* Properties */}
             <div className="space-y-4">
@@ -587,8 +982,45 @@ export function TaskSidebar({ task, isOpen, onClose, onSave, onDelete }: TaskSid
                 </div>
                 <ChipSelector
                   value={formData.status}
-                  onChange={(value: string) => setFormData(prev => ({ ...prev, status: value as TaskStatus }))}
-                  options={[
+                  onChange={(value: string) => setFormData(prev => ({ ...prev, status: value as TaskStatus | AppointmentStatus }))}
+                  options={isAppointment ? [
+                    {
+                      value: 'scheduled',
+                      label: 'Scheduled',
+                      color: '#3B82F6',
+                      bgColor: '#EBF8FF',
+                      textColor: '#1E40AF'
+                    },
+                    {
+                      value: 'confirmed',
+                      label: 'Confirmed',
+                      color: '#22C55E',
+                      bgColor: '#F0FDF4',
+                      textColor: '#166534'
+                    },
+                    {
+                      value: 'in_progress',
+                      label: getStatusDisplayName('in_progress'),
+                      ...STATUS_COLORS.in_progress
+                    },
+                    {
+                      value: 'completed',
+                      label: getStatusDisplayName('completed'),
+                      ...STATUS_COLORS.completed
+                    },
+                    {
+                      value: 'cancelled',
+                      label: getStatusDisplayName('cancelled'),
+                      ...STATUS_COLORS.cancelled
+                    },
+                    {
+                      value: 'no_show',
+                      label: 'No Show',
+                      color: '#EF4444',
+                      bgColor: '#FEF2F2',
+                      textColor: '#DC2626'
+                    }
+                  ] : [
                     {
                       value: 'pending',
                       label: getStatusDisplayName('pending'),
@@ -614,40 +1046,42 @@ export function TaskSidebar({ task, isOpen, onClose, onSave, onDelete }: TaskSid
                 />
               </div>
 
-              {/* Priority */}
-              <div className="flex items-center space-x-3">
-                <div className="flex items-center space-x-2 w-24">
-                  <Flag className="w-4 h-4 text-gray-400" />
-                  <span className="text-sm text-gray-600">Priority</span>
+              {/* Priority - Only show for tasks, not appointments */}
+              {!isAppointment && (
+                <div className="flex items-center space-x-3">
+                  <div className="flex items-center space-x-2 w-24">
+                    <Flag className="w-4 h-4 text-gray-400" />
+                    <span className="text-sm text-gray-600">Priority</span>
+                  </div>
+                  <ChipSelector
+                    value={formData.priority}
+                    onChange={(value: string) => setFormData(prev => ({ ...prev, priority: value as TaskPriority }))}
+                    options={[
+                      {
+                        value: 'low',
+                        label: getPriorityDisplayName('low'),
+                        ...PRIORITY_COLORS.low
+                      },
+                      {
+                        value: 'medium',
+                        label: getPriorityDisplayName('medium'),
+                        ...PRIORITY_COLORS.medium
+                      },
+                      {
+                        value: 'high',
+                        label: getPriorityDisplayName('high'),
+                        ...PRIORITY_COLORS.high
+                      },
+                      {
+                        value: 'urgent',
+                        label: getPriorityDisplayName('urgent'),
+                        ...PRIORITY_COLORS.urgent
+                      }
+                    ]}
+                    className="flex-1"
+                  />
                 </div>
-                <ChipSelector
-                  value={formData.priority}
-                  onChange={(value: string) => setFormData(prev => ({ ...prev, priority: value as TaskPriority }))}
-                  options={[
-                    {
-                      value: 'low',
-                      label: getPriorityDisplayName('low'),
-                      ...PRIORITY_COLORS.low
-                    },
-                    {
-                      value: 'medium',
-                      label: getPriorityDisplayName('medium'),
-                      ...PRIORITY_COLORS.medium
-                    },
-                    {
-                      value: 'high',
-                      label: getPriorityDisplayName('high'),
-                      ...PRIORITY_COLORS.high
-                    },
-                    {
-                      value: 'urgent',
-                      label: getPriorityDisplayName('urgent'),
-                      ...PRIORITY_COLORS.urgent
-                    }
-                  ]}
-                  className="flex-1"
-                />
-              </div>
+              )}
 
               {/* Type */}
               <div className="flex items-center space-x-3">
@@ -671,7 +1105,7 @@ export function TaskSidebar({ task, isOpen, onClose, onSave, onDelete }: TaskSid
                             setNewTypeName('')
                           }
                         }}
-                        placeholder="Enter new task type..."
+                        placeholder={`Enter new ${isAppointment ? 'appointment' : 'task'} type...`}
                         className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         autoFocus
                       />
@@ -697,7 +1131,7 @@ export function TaskSidebar({ task, isOpen, onClose, onSave, onDelete }: TaskSid
                     <ClickableChipDropdown
                       value={formData.type}
                       onChange={handleTypeChange}
-                      placeholder="Select task type..."
+                      placeholder={`Select ${isAppointment ? 'appointment' : 'task'} type...`}
                       chipColor={formData.type ? getTaskTypeColor(formData.type) : undefined}
                       chipBgColor={formData.type ? `${getTaskTypeColor(formData.type)}15` : undefined}
                       chipTextColor={formData.type ? getTaskTypeColor(formData.type) : undefined}
@@ -705,10 +1139,10 @@ export function TaskSidebar({ task, isOpen, onClose, onSave, onDelete }: TaskSid
                         {
                           value: '__ADD_NEW__',
                           label: '+ Add New Type',
-                          description: 'Create a custom task type'
+                          description: `Create a custom ${isAppointment ? 'appointment' : 'task'} type`
                         },
                         { value: '', label: 'No type' },
-                        ...taskTypes.map(type => ({
+                        ...(isAppointment ? appointmentTypes : taskTypes).map(type => ({
                           value: type,
                           label: type,
                           color: getTaskTypeColor(type)
@@ -720,19 +1154,21 @@ export function TaskSidebar({ task, isOpen, onClose, onSave, onDelete }: TaskSid
                 </div>
               </div>
 
-              {/* Due Date */}
-              <div className="flex items-center space-x-3">
-                <div className="flex items-center space-x-2 w-24">
-                  <Calendar className="w-4 h-4 text-gray-400" />
-                  <span className="text-sm text-gray-600">Due</span>
+              {/* Due Date - Only show for tasks, not appointments */}
+              {!isAppointment && (
+                <div className="flex items-center space-x-3">
+                  <div className="flex items-center space-x-2 w-24">
+                    <Calendar className="w-4 h-4 text-gray-400" />
+                    <span className="text-sm text-gray-600">Due</span>
+                  </div>
+                  <input
+                    type="date"
+                    value={formData.due_date || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, due_date: e.target.value || null }))}
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
                 </div>
-                <input
-                  type="date"
-                  value={formData.due_date || ''}
-                  onChange={(e) => setFormData(prev => ({ ...prev, due_date: e.target.value || null }))}
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
+              )}
 
               {/* Contact */}
               <div className="flex items-center space-x-3">

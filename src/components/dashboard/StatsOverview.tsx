@@ -5,7 +5,11 @@ import { DashboardStats, DashboardService } from '@/services/dashboard'
 import { useAuth } from '@/contexts/AuthContext'
 import { TrendingUp, TrendingDown, Users, CheckSquare, Calendar, DollarSign } from 'lucide-react'
 
-export default function StatsOverview() {
+interface StatsOverviewProps {
+  size?: 'small' | 'medium' | 'large'
+}
+
+export default function StatsOverview({ size = 'medium' }: StatsOverviewProps) {
   const { user } = useAuth()
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [loading, setLoading] = useState(true)
@@ -67,7 +71,11 @@ export default function StatsOverview() {
   const TrendIcon = trendData.icon
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+    <div className={`grid gap-4 ${
+      size === 'small' ? 'grid-cols-2' : 
+      size === 'medium' ? 'grid-cols-2 lg:grid-cols-4' : 
+      'grid-cols-2 md:grid-cols-4'
+    } sm:gap-6`}>
       {/* Active Deals */}
       <div className="bg-white p-6 rounded-lg shadow hover:shadow-md transition-shadow">
         <div className="flex items-center justify-between">

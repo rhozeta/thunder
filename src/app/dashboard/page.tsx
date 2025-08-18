@@ -360,7 +360,7 @@ export default function DashboardHome() {
                 <p className="text-sm text-gray-600">Key metrics and performance indicators</p>
               </div>
               <div className="p-6 flex-1">
-                <StatsOverview />
+                <StatsOverview size={sectionSize} />
               </div>
             </div>
           )
@@ -373,6 +373,7 @@ export default function DashboardHome() {
               </div>
               <div className="p-6 flex-1">
                 <PriorityActions 
+                  size={sectionSize}
                   onAddTask={handleAddTask}
                   onAddContact={handleAddContact}
                   onAddDeal={handleAddDeal}
@@ -388,7 +389,7 @@ export default function DashboardHome() {
                 <p className="text-sm text-gray-600">Deal pipeline and revenue forecasts</p>
               </div>
               <div className="p-6 flex-1">
-                <PipelineInsights />
+                <PipelineInsights size={sectionSize} />
               </div>
             </div>
           )
@@ -400,7 +401,7 @@ export default function DashboardHome() {
                 <p className="text-sm text-gray-600">Task overview and productivity metrics</p>
               </div>
               <div className="p-6 flex-1">
-                <TaskManagementHub onAddTask={handleAddTask} />
+                <TaskManagementHub size={sectionSize} onAddTask={handleAddTask} />
               </div>
             </div>
           )
@@ -412,7 +413,7 @@ export default function DashboardHome() {
                 <p className="text-sm text-gray-600">Recent communications and follow-ups</p>
               </div>
               <div className="p-6 flex-1">
-                <CommunicationCenter />
+                <CommunicationCenter size={sectionSize} />
               </div>
             </div>
           )
@@ -424,7 +425,7 @@ export default function DashboardHome() {
                 <p className="text-sm text-gray-600">AI-powered recommendations and analytics</p>
               </div>
               <div className="p-6 flex-1">
-                <SmartInsights />
+                <SmartInsights size={sectionSize} />
               </div>
             </div>
           )

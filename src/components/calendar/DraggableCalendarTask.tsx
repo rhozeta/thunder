@@ -50,64 +50,48 @@ export function DraggableCalendarTask({ task, onEdit }: DraggableCalendarTaskPro
   return (
     <div
       ref={setNodeRef}
-      style={style}
-      {...attributes}
-      className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm hover:shadow-md transition-shadow min-w-0 w-full"
-      onClick={(e) => {
-        // Allow edit button clicks and task content clicks
-        const target = e.target as HTMLElement;
-        if (!target.closest('.edit-button')) {
-          e.stopPropagation();
-          onEdit?.(task);
-        }
+      style={{
+        ...style,
+        // Force exact compact size during drag
+        height: '24px',
+        minHeight: '24px',
+        maxHeight: '24px',
+        padding: '2px 8px',
+        fontSize: '12px',
+        lineHeight: '16px',
+        boxSizing: 'border-box',
+        contain: 'layout style paint',
       }}
+      {...attributes}
+      className={`bg-white border border-gray-200 rounded px-2 py-1 text-xs leading-none hover:bg-gray-50 transition-colors min-w-0 w-full flex items-center justify-between gap-2 group ${isDragging ? 'shadow-lg border-blue-400' : ''}`}
+      onClick={(e) => {
+        e.stopPropagation();
+        onEdit?.(task);
+      }}
+      title={task.title}
     >
-      <div className="task-content min-w-0">
-        <div className="space-y-2">
-          <div className="flex items-start justify-between gap-2">
-            <div className="font-medium text-gray-900 text-sm leading-tight break-words flex-1">{task.title}</div>
-            <div
-              {...listeners}
-              className="drag-handle text-gray-400 hover:text-gray-600 cursor-move p-1 flex-shrink-0"
-              title="Drag to move task"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
-              </svg>
-            </div>
-          </div>
-          
-          {task.contact && (
-            <div className="flex items-center text-xs text-gray-600 min-w-0">
-              <User className="w-3 h-3 mr-1 flex-shrink-0" />
-              <span className="truncate">
-                {task.contact.first_name} {task.contact.last_name}
-              </span>
-            </div>
-          )}
-          
-          {task.deal && (
-            <div className="flex items-center text-xs text-gray-500 min-w-0">
-              <Briefcase className="w-3 h-3 mr-1 flex-shrink-0" />
-              <span className="truncate">{task.deal.title}</span>
-            </div>
-          )}
-          
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center space-x-1 min-w-0">
-              <div className={`w-2 h-2 rounded-full flex-shrink-0 ${getPriorityColor(task.priority)}`} />
-              <span className="text-xs text-gray-500 capitalize truncate">{task.priority}</span>
-            </div>
-            
-            <div className={`text-xs px-2 py-1 rounded whitespace-nowrap flex-shrink-0 ${getStatusColor(task.status)}`}>
-              {task.status.replace('_', ' ')}
-            </div>
-          </div>
-          
-          {task.type && (
-            <div className="text-xs text-gray-500 truncate">{task.type}</div>
-          )}
+      <div className="flex items-center gap-1.5 min-w-0 flex-1" style={{ height: '16px', lineHeight: '16px' }}>
+        <div 
+          {...listeners} 
+          className="text-gray-400 hover:text-gray-600 cursor-grab active:cursor-grabbing flex-shrink-0 group-hover:opacity-100 opacity-70 transition-opacity"
+          title="Drag to move task"
+          style={{ height: '12px', lineHeight: '12px' }}
+        >
+          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
         </div>
+        <div className={`w-2 h-2 rounded-full flex-shrink-0 ${getPriorityColor(task.priority)}`} />
+        <span className="text-gray-900 truncate font-medium cursor-pointer" style={{ height: '16px', lineHeight: '16px' }}>
+          {task.title}
+        </span>
+      </div>
+      
+      <div 
+        className={`text-xs px-1.5 py-0.5 rounded whitespace-nowrap flex-shrink-0 ${getStatusColor(task.status)}`}
+        style={{ height: '16px', lineHeight: '16px' }}
+      >
+        {task.status.replace('_', ' ')}
       </div>
     </div>
   );

@@ -6,7 +6,11 @@ import { useAuth } from '@/contexts/AuthContext'
 import { TrendingUp, Users, DollarSign, Activity, Eye } from 'lucide-react'
 import Link from 'next/link'
 
-export default function PipelineInsights() {
+interface PipelineInsightsProps {
+  size?: 'small' | 'medium' | 'large'
+}
+
+export default function PipelineInsights({ size = 'medium' }: PipelineInsightsProps) {
   const { user } = useAuth()
   const [pipelineData, setPipelineData] = useState<PipelineData | null>(null)
   const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([])
@@ -121,142 +125,145 @@ export default function PipelineInsights() {
     (pipelineData.prospect.value + pipelineData.qualified.value + pipelineData.proposal.value + pipelineData.negotiation.value) : 0
 
   return (
-    <div className="space-y-6">
-      {/* Pipeline Overview */}
-      <div className="bg-white p-6 rounded-lg shadow">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-lg font-semibold text-gray-900">Deal Pipeline</h3>
+    <div className="space-y-4">
+      {/* Pipeline Overview - Priority 1: Always show but compact for small */}
+      <div className="bg-white p-4 rounded-lg shadow">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-base font-semibold text-gray-900">Deal Pipeline</h3>
           <Link 
             href="/dashboard/deals"
-            className="flex items-center text-blue-600 hover:text-blue-700 text-sm font-medium"
+            className="flex items-center text-blue-600 hover:text-blue-700 text-xs font-medium"
           >
-            <Eye className="w-4 h-4 mr-1" />
+            <Eye className="w-3 h-3 mr-1" />
             View All
           </Link>
         </div>
 
-        {/* Pipeline Stats */}
-        <div className="grid grid-cols-3 gap-4 mb-6">
+        {/* Pipeline Stats - Responsive layout */}
+        <div className={`grid gap-3 mb-4 ${size === 'small' ? 'grid-cols-2' : 'grid-cols-3'}`}>
           <div className="text-center">
-            <p className="text-2xl font-bold text-gray-900">{totalDeals}</p>
-            <p className="text-sm text-gray-600">Total Deals</p>
+            <p className={`font-bold text-gray-900 ${size === 'small' ? 'text-lg' : 'text-2xl'}`}>{totalDeals}</p>
+            <p className="text-xs text-gray-600">Total Deals</p>
           </div>
           <div className="text-center">
-            <p className="text-2xl font-bold text-green-600">{formatCurrency(activeValue)}</p>
-            <p className="text-sm text-gray-600">Active Pipeline</p>
+            <p className={`font-bold text-green-600 ${size === 'small' ? 'text-lg' : 'text-2xl'}`}>{formatCurrency(activeValue)}</p>
+            <p className="text-xs text-gray-600">Active Pipeline</p>
           </div>
-          <div className="text-center">
-            <p className="text-2xl font-bold text-blue-600">{formatCurrency(totalValue)}</p>
-            <p className="text-sm text-gray-600">Total Value</p>
-          </div>
+          {size !== 'small' && (
+            <div className="text-center">
+              <p className="text-2xl font-bold text-blue-600">{formatCurrency(totalValue)}</p>
+              <p className="text-xs text-gray-600">Total Value</p>
+            </div>
+          )}
         </div>
 
-        {/* Pipeline Visualization */}
-        <div className="space-y-3">
-          {pipelineStages.map((stage) => {
-            const stageData = pipelineData?.[stage.key as keyof PipelineData]
-            const percentage = totalDeals > 0 ? (stageData?.count || 0) / totalDeals * 100 : 0
-            
-            return (
-              <div key={stage.key} className="flex items-center">
-                <div className="w-20 text-sm text-gray-600 text-right mr-3">
-                  {stage.label}
-                </div>
-                <div className="flex-1 bg-gray-200 rounded-full h-6 relative">
-                  <div
-                    className={`${stage.color} h-6 rounded-full transition-all duration-300 flex items-center justify-between px-3`}
-                    style={{ width: `${Math.max(percentage, 5)}%` }}
-                  >
-                    <span className="text-white text-xs font-medium">
-                      {stageData?.count || 0}
-                    </span>
-                    {(stageData?.value || 0) > 0 && (
-                      <span className="text-white text-xs">
-                        {formatCurrency(stageData?.value || 0)}
+        {/* Pipeline Visualization - Show fewer stages for small */}
+        <div className="space-y-2">
+          {pipelineStages
+            .filter(stage => size !== 'small' || ['qualified', 'proposal', 'negotiation', 'closed_won'].includes(stage.key))
+            .map((stage) => {
+              const stageData = pipelineData?.[stage.key as keyof PipelineData]
+              const percentage = totalDeals > 0 ? (stageData?.count || 0) / totalDeals * 100 : 0
+              
+              return (
+                <div key={stage.key} className="flex items-center">
+                  <div className={`text-xs text-gray-600 text-right mr-2 ${size === 'small' ? 'w-16' : 'w-20'}`}>
+                    {stage.label}
+                  </div>
+                  <div className="flex-1 bg-gray-200 rounded-full h-4 relative">
+                    <div
+                      className={`${stage.color} h-4 rounded-full transition-all duration-300 flex items-center justify-between px-2`}
+                      style={{ width: `${Math.max(percentage, 5)}%` }}
+                    >
+                      <span className="text-white text-xs font-medium">
+                        {stageData?.count || 0}
                       </span>
-                    )}
+                      {size !== 'small' && (stageData?.value || 0) > 0 && (
+                        <span className="text-white text-xs">
+                          {formatCurrency(stageData?.value || 0)}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="w-8 text-xs text-gray-600 text-right ml-2">
+                    {percentage.toFixed(0)}%
                   </div>
                 </div>
-                <div className="w-12 text-sm text-gray-600 text-right ml-3">
-                  {percentage.toFixed(0)}%
-                </div>
+              )
+            })}
+        </div>
+      </div>
+
+      {/* Revenue Forecast - Priority 2: Show for medium+ */}
+      {size !== 'small' && (
+        <div className="bg-white p-4 rounded-lg shadow">
+          <h3 className="text-base font-semibold text-gray-900 mb-3">Revenue Forecast</h3>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="p-3 bg-blue-50 rounded-lg">
+              <div className="flex items-center mb-1">
+                <TrendingUp className="w-4 h-4 text-blue-600 mr-1" />
+                <span className="font-medium text-gray-900 text-sm">Potential</span>
               </div>
-            )
-          })}
-        </div>
-      </div>
-
-      {/* Revenue Forecast */}
-      <div className="bg-white p-6 rounded-lg shadow">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Revenue Forecast</h3>
-        <div className="grid grid-cols-2 gap-4">
-          <div className="p-4 bg-blue-50 rounded-lg">
-            <div className="flex items-center mb-2">
-              <TrendingUp className="w-5 h-5 text-blue-600 mr-2" />
-              <span className="font-medium text-gray-900">Potential Revenue</span>
+              <p className="text-lg font-bold text-blue-600">
+                {formatCurrency(activeValue)}
+              </p>
+              <p className="text-xs text-gray-600">From active deals</p>
             </div>
-            <p className="text-2xl font-bold text-blue-600">
-              {formatCurrency(activeValue)}
-            </p>
-            <p className="text-sm text-gray-600">From active deals</p>
-          </div>
-          <div className="p-4 bg-green-50 rounded-lg">
-            <div className="flex items-center mb-2">
-              <DollarSign className="w-5 h-5 text-green-600 mr-2" />
-              <span className="font-medium text-gray-900">Closed Revenue</span>
+            <div className="p-3 bg-green-50 rounded-lg">
+              <div className="flex items-center mb-1">
+                <DollarSign className="w-4 h-4 text-green-600 mr-1" />
+                <span className="font-medium text-gray-900 text-sm">Closed</span>
+              </div>
+              <p className="text-lg font-bold text-green-600">
+                {formatCurrency(pipelineData?.closed_won.value || 0)}
+              </p>
+              <p className="text-xs text-gray-600">This period</p>
             </div>
-            <p className="text-2xl font-bold text-green-600">
-              {formatCurrency(pipelineData?.closed_won.value || 0)}
-            </p>
-            <p className="text-sm text-gray-600">This period</p>
           </div>
         </div>
-      </div>
+      )}
 
-      {/* Recent Activity */}
-      <div className="bg-white p-6 rounded-lg shadow">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">Recent Activity</h3>
-          <span className="text-sm text-gray-500">Last 24 hours</span>
-        </div>
-        
-        {recentActivity.length > 0 ? (
-          <div className="space-y-3">
-            {recentActivity.slice(0, 6).map((activity) => (
-              <Link
-                key={activity.id}
-                href={getActivityLink(activity)}
-                className="flex items-start space-x-3 p-3 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                <div className="flex-shrink-0 mt-1">
-                  {getActivityIcon(activity.type)}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 truncate">
-                    {activity.title}
-                  </p>
-                  <p className="text-sm text-gray-600 truncate">
-                    {activity.description}
-                  </p>
-                  {activity.relatedEntity && (
-                    <p className="text-xs text-gray-500">
-                      Related to: {activity.relatedEntity.name}
+      {/* Recent Activity - Priority 3: Only show for large */}
+      {size === 'large' && (
+        <div className="bg-white p-4 rounded-lg shadow">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-base font-semibold text-gray-900">Recent Activity</h3>
+            <span className="text-xs text-gray-500">Last 24 hours</span>
+          </div>
+          
+          {recentActivity.length > 0 ? (
+            <div className="space-y-2">
+              {recentActivity.slice(0, 4).map((activity) => (
+                <Link
+                  key={activity.id}
+                  href={getActivityLink(activity)}
+                  className="flex items-start space-x-2 p-2 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  <div className="flex-shrink-0 mt-1">
+                    {getActivityIcon(activity.type)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 truncate">
+                      {activity.title}
                     </p>
-                  )}
-                </div>
-                <div className="flex-shrink-0 text-xs text-gray-500">
-                  {formatTimeAgo(activity.timestamp)}
-                </div>
-              </Link>
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-8">
-            <Activity className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-            <p className="text-gray-500">No recent activity</p>
-          </div>
-        )}
-      </div>
+                    <p className="text-xs text-gray-600 truncate">
+                      {activity.description}
+                    </p>
+                  </div>
+                  <div className="flex-shrink-0 text-xs text-gray-500">
+                    {formatTimeAgo(activity.timestamp)}
+                  </div>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-4">
+              <Activity className="w-6 h-6 text-gray-400 mx-auto mb-1" />
+              <p className="text-gray-500 text-sm">No recent activity</p>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }

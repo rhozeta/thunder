@@ -64,8 +64,87 @@ export function CalendarHeader({ view, setView, selectedDate, onDateSelect }: Ca
   };
 
   return (
-    <div className="bg-white border-b border-gray-200 px-6 py-4">
-      <div className="flex items-center justify-between">
+    <div className="bg-white border-b border-gray-200 px-4 py-3 w-full overflow-hidden">
+      {/* Mobile Layout */}
+      <div className="block md:hidden w-full">
+        <div className="flex items-center justify-between mb-3">
+          <h1 className="text-xl font-bold text-gray-900 truncate">Calendar</h1>
+          <div className="flex items-center space-x-1">
+            <button
+              onClick={handlePrevious}
+              className="p-1.5 hover:bg-gray-100 rounded-md transition-colors"
+              title="Previous"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+            <button
+              onClick={handleToday}
+              className="px-2 py-1 text-xs border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+            >
+              Today
+            </button>
+            <button
+              onClick={handleNext}
+              className="p-1.5 hover:bg-gray-100 rounded-md transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          </div>
+        </div>
+        
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-medium text-gray-700 truncate flex-1 mr-2">{getDateDisplay()}</h2>
+          <div className="flex items-center space-x-1 flex-shrink-0">
+            <button
+              onClick={() => setView('day')}
+              className={`px-2 py-1 text-xs rounded transition-colors ${
+                view === 'day' 
+                  ? 'bg-blue-600 text-white' 
+                  : 'bg-gray-100 text-gray-700'
+              }`}
+            >
+              D
+            </button>
+            <button
+              onClick={() => setView('3day')}
+              className={`px-2 py-1 text-xs rounded transition-colors ${
+                view === '3day' 
+                  ? 'bg-blue-600 text-white' 
+                  : 'bg-gray-100 text-gray-700'
+              }`}
+            >
+              3D
+            </button>
+            <button
+              onClick={() => setView('week')}
+              className={`px-2 py-1 text-xs rounded transition-colors ${
+                view === 'week' 
+                  ? 'bg-blue-600 text-white' 
+                  : 'bg-gray-100 text-gray-700'
+              }`}
+            >
+              W
+            </button>
+            <button
+              onClick={() => setView('month')}
+              className={`px-2 py-1 text-xs rounded transition-colors ${
+                view === 'month' 
+                  ? 'bg-blue-600 text-white' 
+                  : 'bg-gray-100 text-gray-700'
+              }`}
+            >
+              M
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Desktop Layout */}
+      <div className="hidden md:flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <h1 className="text-2xl font-bold text-gray-900">Calendar</h1>
           

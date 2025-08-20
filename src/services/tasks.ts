@@ -110,13 +110,21 @@ export const TaskService = {
       .single()
 
     if (error) {
-      console.error('Error creating task:', {
-        message: error.message,
-        details: (error as any).details,
-        hint: (error as any).hint,
-        code: (error as any).code,
-      })
-      throw error
+      const errorDetails = {
+        message: error.message || 'Unknown error',
+        details: (error as any).details || 'No details available',
+        hint: (error as any).hint || 'No hint available',
+        code: (error as any).code || 'No code available',
+        fullError: error,
+        taskData: task
+      }
+      console.error('Error creating task:', errorDetails)
+      
+      // Create a more informative error to throw
+      const enhancedError = new Error(`Task creation failed: ${error.message || 'Unknown error'}`)
+      ;(enhancedError as any).originalError = error
+      ;(enhancedError as any).taskData = task
+      throw enhancedError
     }
 
     return data

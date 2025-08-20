@@ -83,7 +83,7 @@ export function Calendar({ tasks, appointments, view, selectedDate, onDateSelect
   };
 
   return (
-    <div className="h-full">
+    <div className="h-full w-full overflow-hidden">
       {renderView()}
     </div>
   );

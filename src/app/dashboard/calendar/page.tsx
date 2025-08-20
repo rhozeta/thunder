@@ -32,7 +32,7 @@ export default function CalendarPage() {
   const displayAppointments = appointments;
   const [view, setView] = useState<'day' | 'week' | 'month' | '3day'>('week');
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  // Removed sidebarOpen state - always show content with responsive design
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
@@ -145,15 +145,15 @@ export default function CalendarPage() {
       onDragEnd={handleDragEnd}
       collisionDetection={closestCenter}
     >
-      <div className="flex h-full bg-gray-50">
-        <div className="flex-1 flex flex-col">
+      <div className="flex h-full w-full bg-gray-50 overflow-hidden">
+        <div className="flex-1 relative w-full min-w-0 overflow-hidden">
           <CalendarHeader 
             view={view} 
             setView={setView} 
             selectedDate={selectedDate} 
             onDateSelect={setSelectedDate}
           />
-          <div className="flex-1 overflow-auto">
+          <div className="w-full overflow-hidden">
             <Calendar
               view={view}
               selectedDate={selectedDate}
@@ -167,24 +167,32 @@ export default function CalendarPage() {
               onToggleTasksExpansion={() => setIsTasksExpanded(!isTasksExpanded)}
             />
           </div>
+          
+          {/* Floating Add Button - Mobile */}
+          <button
+            onClick={handleAddTask}
+            className="md:hidden fixed bottom-6 right-6 w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center z-50"
+            aria-label="Add new task"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+          </button>
         </div>
         
-        {sidebarOpen && (
-          <div className="flex-shrink-0 h-full bg-white border-l border-gray-200 transition-all duration-300" style={{width: sidebarCollapsed ? '48px' : '320px'}}>
-            <div className="h-full flex flex-col">
-              <div className="flex-1">
-                <UnscheduledTasksSidebar 
-                  tasks={unscheduledTasks}
-                  isOpen={sidebarOpen}
-                  onToggle={() => setSidebarOpen(!sidebarOpen)}
-                  onAddTask={handleAddTask}
-                  onCollapsedChange={setSidebarCollapsed}
-                  onEditTask={handleEditTask}
-                />
-              </div>
-            </div>
+        {/* Desktop Sidebar */}
+        <div className="hidden md:block w-80 border-l border-gray-200 bg-gray-50">
+          <div className="h-full">
+            <UnscheduledTasksSidebar
+              tasks={unscheduledTasks}
+              isOpen={true}
+              onToggle={() => {}}
+              onAddTask={handleAddTask}
+              onCollapsedChange={setSidebarCollapsed}
+              onEditTask={handleEditTask}
+            />
           </div>
-        )}
+        </div>
 
         <TaskSidebar
           task={selectedTask}

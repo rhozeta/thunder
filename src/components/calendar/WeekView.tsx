@@ -75,57 +75,209 @@ export function WeekView({ tasks, appointments, selectedDate, onDateSelect, onEd
 
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full w-full flex flex-col overflow-hidden">
+      {/* Mobile-First Week View */}
+      <div className="block md:hidden h-full w-full overflow-hidden">
+        {/* Mobile Week Header */}
+        <div className="bg-white border-b border-gray-200 px-4 py-3 w-full">
+          <div className="text-center">
+            <div className="text-lg font-semibold text-gray-900">
+              {format(selectedDate, 'MMMM yyyy')}
+            </div>
+            <div className="text-sm text-gray-600 mt-1">
+              Week of {format(weekStart, 'MMM d')} - {format(weekEnd, 'MMM d')}
+            </div>
+          </div>
+        </div>
+
+        {/* Mobile Day Cards */}
+        <div className="flex-1 overflow-y-auto w-full">
+          {days.map(day => {
+            const dayTasks = getTasksForDate(day);
+            const dayAppointments = getAppointmentsForDate(day);
+            const isToday = isSameDay(day, new Date());
+            
+            return (
+              <div key={day.toISOString()} className="border-b border-gray-200 last:border-b-0 w-full">
+                {/* Day Header */}
+                <div className={`px-4 py-3 w-full ${
+                  isToday ? 'bg-blue-50 border-l-4 border-l-blue-500' : 'bg-gray-50'
+                }`}>
+                  <div className="flex items-center justify-between w-full">
+                    <div className="min-w-0 flex-1">
+                      <div className={`text-lg font-semibold truncate ${
+                        isToday ? 'text-blue-700' : 'text-gray-900'
+                      }`}>
+                        {format(day, 'EEEE, MMM d')}
+                      </div>
+                      {isToday && (
+                        <div className="text-sm text-blue-600 font-medium">Today</div>
+                      )}
+                    </div>
+                    <div className="text-sm text-gray-500 flex-shrink-0 ml-2">
+                      {dayTasks.length + dayAppointments.length} items
+                    </div>
+                  </div>
+                </div>
+
+                {/* Day Content */}
+                <div className="px-4 py-3 space-y-3 w-full">
+                  {/* Tasks Section */}
+                  {dayTasks.length > 0 && (
+                    <div>
+                      <div className="text-sm font-medium text-gray-700 mb-2 flex items-center">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full mr-2"></div>
+                        Tasks ({dayTasks.length})
+                      </div>
+                      <div className="space-y-2">
+                        {dayTasks.map(task => (
+                          <div
+                            key={task.id}
+                            onClick={() => onEditTask(task)}
+                            className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm hover:shadow-md transition-shadow cursor-pointer w-full"
+                          >
+                            <div className="flex items-start justify-between w-full">
+                              <div className="flex-1 min-w-0 pr-2">
+                                <div className="font-medium text-gray-900 truncate">
+                                  {task.title}
+                                </div>
+                                {task.description && (
+                                  <div className="text-sm text-gray-600 mt-1 line-clamp-2 break-words">
+                                    {task.description}
+                                  </div>
+                                )}
+                              </div>
+                              <div className={`flex-shrink-0 px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${
+                                task.priority === 'high' ? 'bg-red-100 text-red-800' :
+                                task.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                                'bg-green-100 text-green-800'
+                              }`}>
+                                {task.priority}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Appointments Section */}
+                  {dayAppointments.length > 0 && (
+                    <div>
+                      <div className="text-sm font-medium text-gray-700 mb-2 flex items-center">
+                        <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                        Appointments ({dayAppointments.length})
+                      </div>
+                      <div className="space-y-2">
+                        {dayAppointments.map(appointment => {
+                          const startTime = appointment.start_datetime ? 
+                            format(new Date(appointment.start_datetime), 'h:mm a') : '';
+                          const endTime = appointment.end_datetime ? 
+                            format(new Date(appointment.end_datetime), 'h:mm a') : '';
+                          
+                          return (
+                            <div
+                              key={appointment.id}
+                              onClick={() => onEditAppointment(appointment)}
+                              className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm hover:shadow-md transition-shadow cursor-pointer w-full"
+                            >
+                              <div className="flex items-start justify-between w-full">
+                                <div className="flex-1 min-w-0 pr-2">
+                                  <div className="font-medium text-gray-900 truncate">
+                                    {appointment.title}
+                                  </div>
+                                  <div className="text-sm text-gray-600 mt-1">
+                                    {startTime}{endTime && ` - ${endTime}`}
+                                  </div>
+                                  {appointment.location && (
+                                    <div className="text-sm text-gray-500 mt-1 truncate">
+                                      📍 {appointment.location}
+                                    </div>
+                                  )}
+                                </div>
+                                <div className={`flex-shrink-0 px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${
+                                  appointment.status === 'confirmed' ? 'bg-green-100 text-green-800' :
+                                  appointment.status === 'scheduled' ? 'bg-blue-100 text-blue-800' :
+                                  appointment.status === 'in_progress' ? 'bg-yellow-100 text-yellow-800' :
+                                  'bg-gray-100 text-gray-800'
+                                }`}>
+                                  {appointment.status}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Empty State */}
+                  {dayTasks.length === 0 && dayAppointments.length === 0 && (
+                    <div className="text-center py-6 text-gray-500">
+                      <div className="text-sm">No tasks or appointments</div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Desktop Week View */}
+      <div className="hidden md:flex md:flex-col md:h-full">
         {/* Fixed Header Section */}
         <div className="flex-shrink-0 bg-white border-b border-gray-200 shadow-sm">
-          <div className="flex" style={{ minWidth: '1500px' }}>
-            {/* Timeline Column Header */}
-            <div className="w-20 flex-shrink-0 bg-gray-50 border-r border-gray-200">
-              {/* Day Header Height */}
-              <div className="h-16 border-b border-gray-200 flex items-center justify-center">
-                <div className="text-xs font-medium text-gray-900">
-                  {format(selectedDate, 'MMM yyyy')}
+          <div className="overflow-x-auto">
+            <div className="flex" style={{ minWidth: '800px' }}>
+              {/* Timeline Column Header */}
+              <div className="w-16 lg:w-20 flex-shrink-0 bg-gray-50 border-r border-gray-200">
+                {/* Day Header Height */}
+                <div className="h-12 lg:h-16 border-b border-gray-200 flex items-center justify-center">
+                  <div className="text-xs font-medium text-gray-900">
+                    {format(selectedDate, 'MMM yyyy')}
+                  </div>
+                </div>
+                
+                {/* Tasks Section Spacer */}
+                <div className="bg-gray-50 border-b border-gray-200" style={{ minHeight: '60px' }}>
                 </div>
               </div>
-              
-              {/* Tasks Section Spacer */}
-              <div className="bg-gray-50 border-b border-gray-200" style={{ minHeight: '60px' }}>
-              </div>
-            </div>
 
-            {/* Days Headers */}
-            <div className="flex-1 grid grid-cols-7 gap-px bg-gray-200">
-              {days.map(day => (
-                <div key={day.toISOString()} className="bg-gray-50">
-                  {/* Day Header */}
-                  <div className="h-16 border-b border-gray-200 px-2 py-2 text-center flex flex-col justify-center">
-                    <div className="text-xs font-medium text-gray-900">
-                      {format(day, 'EEE')}
+              {/* Days Headers */}
+              <div className="flex-1 grid grid-cols-7 gap-px bg-gray-200">
+                {days.map(day => (
+                  <div key={day.toISOString()} className="bg-gray-50 min-w-0">
+                    {/* Day Header */}
+                    <div className="h-12 lg:h-16 border-b border-gray-200 px-1 lg:px-2 py-2 text-center flex flex-col justify-center">
+                      <div className="text-xs font-medium text-gray-900">
+                        {format(day, 'EEE')}
+                      </div>
+                      <div className={`text-sm font-bold ${
+                        isSameDay(day, new Date()) ? 'text-blue-600' : 'text-gray-900'
+                      }`}>
+                        {format(day, 'd')}
+                      </div>
                     </div>
-                    <div className={`text-sm font-bold ${
-                      isSameDay(day, new Date()) ? 'text-blue-600' : 'text-gray-900'
-                    }`}>
-                      {format(day, 'd')}
+                    
+                    {/* Tasks Section */}
+                    <div className="bg-white border-b border-gray-200">
+                      <DroppableTaskArea
+                        date={day}
+                        tasks={getTasksForDate(day)}
+                        onEditTask={onEditTask}
+                        isExpanded={isTasksExpanded}
+                      />
                     </div>
                   </div>
-                  
-                  {/* Tasks Section */}
-                  <div className="bg-white border-b border-gray-200">
-                    <DroppableTaskArea
-                      date={day}
-                      tasks={getTasksForDate(day)}
-                      onEditTask={onEditTask}
-                      isExpanded={isTasksExpanded}
-                    />
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
           
           {/* Global Tasks Expansion Strip - Spans full width */}
           <div className="flex border-t border-gray-300">
-            <div className="w-20 flex-shrink-0 bg-gray-50 border-r border-gray-200"></div>
+            <div className="w-16 lg:w-20 flex-shrink-0 bg-gray-50 border-r border-gray-200"></div>
             <div 
               onClick={onToggleTasksExpansion}
               className="flex-1 bg-gray-50 hover:bg-gray-100 cursor-pointer transition-colors"
@@ -138,57 +290,59 @@ export function WeekView({ tasks, appointments, selectedDate, onDateSelect, onEd
         </div>
         
         {/* Scrollable Timeline Section */}
-        <div className="flex-1 overflow-auto" style={{ overflow: 'auto' }}>
-          <div className="flex" style={{ minWidth: '1500px' }}>
-            {/* Timeline Column */}
-            <div className="w-20 flex-shrink-0 bg-gray-50 border-r border-gray-200">
-              {/* Time Labels */}
-              {timeSlots.map(hour => (
-                <div key={hour} className="h-15 border-b border-gray-100 flex items-start justify-end pr-2 pt-1">
-                  <span className="text-xs text-gray-500">
-                    {format(addHours(startOfDay(new Date()), hour), 'HH:mm')}
-                  </span>
-                </div>
-              ))}
-            </div>
-
-            {/* Days Timeline Grid */}
-            <div className="flex-1 grid grid-cols-7 gap-px bg-gray-200">
-              {days.map(day => {
-                const dayAppointments = getAppointmentsForDate(day);
-
-                return (
-                  <div
-                    key={day.toISOString()}
-                    className="bg-white relative"
-                  >
-                    {/* Timeline Section */}
-                    <div className="relative">
-                      {timeSlots.map(hour => (
-                        <div key={hour} className="h-15 border-b border-gray-100 relative">
-                          {/* Hour line */}
-                          <div className="absolute top-0 left-0 right-0 h-px bg-gray-200"></div>
-                        </div>
-                      ))}
-                      
-                      {/* Appointments positioned by time */}
-                      {dayAppointments.map(appointment => {
-                        const position = getAppointmentPosition(appointment);
-                        return (
-                          <DraggableAppointment
-                            key={appointment.id}
-                            appointment={appointment}
-                            position={position}
-                            onEdit={onEditAppointment}
-                            onUpdate={onUpdateAppointment}
-                            timeSlotHeight={60}
-                          />
-                        );
-                      })}
-                    </div>
+        <div className="flex-1 overflow-auto">
+          <div className="overflow-x-auto">
+            <div className="flex" style={{ minWidth: '800px' }}>
+              {/* Timeline Column */}
+              <div className="w-16 lg:w-20 flex-shrink-0 bg-gray-50 border-r border-gray-200">
+                {/* Time Labels */}
+                {timeSlots.map(hour => (
+                  <div key={hour} className="h-12 lg:h-15 border-b border-gray-100 flex items-start justify-end pr-1 lg:pr-2 pt-1">
+                    <span className="text-xs text-gray-500">
+                      {format(addHours(startOfDay(new Date()), hour), 'HH:mm')}
+                    </span>
                   </div>
-                );
-              })}
+                ))}
+              </div>
+
+              {/* Days Timeline Grid */}
+              <div className="flex-1 grid grid-cols-7 gap-px bg-gray-200">
+                {days.map(day => {
+                  const dayAppointments = getAppointmentsForDate(day);
+
+                  return (
+                    <div
+                      key={day.toISOString()}
+                      className="bg-white relative min-w-0"
+                    >
+                      {/* Timeline Section */}
+                      <div className="relative">
+                        {timeSlots.map(hour => (
+                          <div key={hour} className="h-12 lg:h-15 border-b border-gray-100 relative">
+                            {/* Hour line */}
+                            <div className="absolute top-0 left-0 right-0 h-px bg-gray-200"></div>
+                          </div>
+                        ))}
+                        
+                        {/* Appointments positioned by time */}
+                        {dayAppointments.map(appointment => {
+                          const position = getAppointmentPosition(appointment);
+                          return (
+                            <DraggableAppointment
+                              key={appointment.id}
+                              appointment={appointment}
+                              position={position}
+                              onEdit={onEditAppointment}
+                              onUpdate={onUpdateAppointment}
+                              timeSlotHeight={48} // Smaller for mobile
+                            />
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </div>
@@ -203,5 +357,6 @@ export function WeekView({ tasks, appointments, selectedDate, onDateSelect, onEd
           </button>
         </div>
       </div>
+    </div>
   );
 }

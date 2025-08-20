@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClientComponentClient } from '@/lib/auth'
@@ -10,8 +10,29 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
   const router = useRouter()
   const supabase = createClientComponentClient()
+
+  // Check for auth messages from URL parameters
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search)
+    const errorParam = urlParams.get('error')
+    const successParam = urlParams.get('success')
+    
+    if (errorParam) {
+      setError(decodeURIComponent(errorParam))
+      // Clean URL
+      window.history.replaceState({}, '', '/login')
+    }
+    
+    if (successParam) {
+      setSuccess('Authentication successful!')
+      // Clean URL and clear success message after 3 seconds
+      window.history.replaceState({}, '', '/login')
+      setTimeout(() => setSuccess(null), 3000)
+    }
+  }, [])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -42,6 +63,37 @@ export default function LoginPage() {
     }
   }
 
+  const handleGoogleLogin = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      
+      console.log('Starting Google OAuth flow...')
+      
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
+        },
+      })
+      
+      if (error) {
+        console.error('Google OAuth error:', error)
+        setError(`Google login failed: ${error.message}`)
+        setLoading(false)
+      }
+      // If successful, user will be redirected to Google
+    } catch (error) {
+      console.error('Google OAuth exception:', error)
+      setError('Failed to initiate Google login')
+      setLoading(false)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-100 via-pink-50 to-purple-100 flex">
       {/* Split screen container */}
@@ -56,6 +108,12 @@ export default function LoginPage() {
             {error && (
               <div className="rounded-lg bg-red-50 border border-red-200 p-3 mb-6">
                 <div className="text-sm text-red-700">{error}</div>
+              </div>
+            )}
+            
+            {success && (
+              <div className="rounded-lg bg-green-50 border border-green-200 p-3 mb-6">
+                <div className="text-sm text-green-700">{success}</div>
               </div>
             )}
             
@@ -109,7 +167,13 @@ export default function LoginPage() {
               <div className="text-center">
                 <p className="text-gray-500 text-sm mb-4">Or continue with</p>
                 <div className="flex justify-center space-x-4">
-                  <button type="button" className="w-12 h-12 bg-white border border-gray-200 rounded-xl flex items-center justify-center hover:bg-gray-50 transition-colors">
+                  <button 
+                    type="button" 
+                    onClick={handleGoogleLogin}
+                    disabled={loading}
+                    className="w-12 h-12 bg-white border border-gray-200 rounded-xl flex items-center justify-center hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="Sign in with Google"
+                  >
                     <svg className="w-5 h-5" viewBox="0 0 24 24">
                       <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                       <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>

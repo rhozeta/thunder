@@ -544,7 +544,7 @@ export function TaskSidebar({ task, appointment, isOpen, onClose, onSave, onDele
           await TaskService.createTask({
             ...taskData,
             assigned_user_id: user.id,
-            sort_order: Math.floor(Date.now() / 1000)
+            sort_order: Math.floor(Date.now() / 100000) // Use smaller value to fit NUMERIC(10,2) constraint
           })
         }
       }
@@ -664,7 +664,7 @@ export function TaskSidebar({ task, appointment, isOpen, onClose, onSave, onDele
             deal_id: data.deal_id || null,
             type: data.type || null,
             assigned_user_id: user.id,
-            sort_order: Math.floor(Date.now() / 1000)
+            sort_order: Math.floor(Date.now() / 100000) // Use smaller value to fit NUMERIC(10,2) constraint
           }
           const newTask = await TaskService.createTask(insertData)
           lastSavedDataRef.current = currentDataString
@@ -673,7 +673,14 @@ export function TaskSidebar({ task, appointment, isOpen, onClose, onSave, onDele
         }
       }
     } catch (error) {
-      console.error('Auto-save error:', error)
+      console.error('Auto-save error:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        error: error,
+        formData: data,
+        isAppointment,
+        taskId: task?.id,
+        appointmentId: appointment?.id
+      })
       setSaveStatus('error')
       setTimeout(() => setSaveStatus('idle'), 3000)
     }

@@ -69,7 +69,7 @@ export class DashboardService {
       const { data: tasks } = await supabase
         .from('tasks')
         .select('status, due_date')
-        .eq('assigned_agent_id', userId)
+        .eq('assigned_user_id', userId)
         .neq('status', 'completed')
 
       // Get contacts created this week
@@ -86,13 +86,19 @@ export class DashboardService {
         .eq('assigned_agent_id', userId)
         .gte('created_at', weekAgo.toISOString())
 
-      // Get today's tasks
-      const today = new Date().toISOString().split('T')[0]
+      // Get today's tasks (using local timezone)
+      const today = new Date().toLocaleDateString('en-CA') // YYYY-MM-DD format in local timezone
       const { data: todayTasks } = await supabase
         .from('tasks')
         .select('*')
-        .eq('assigned_agent_id', userId)
+        .eq('assigned_user_id', userId)
         .eq('due_date', today)
+      
+      console.log('Dashboard Service Debug:', {
+        todayDate: today,
+        todayTasksFound: todayTasks?.length || 0,
+        userId
+      })
 
       // Calculate stats
       const activeDealsCount = deals?.length || 0

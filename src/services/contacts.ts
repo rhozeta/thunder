@@ -2,13 +2,18 @@ import { supabase } from '@/lib/supabase'
 import { Contact, ContactInsert, ContactUpdate } from '@/types/contact'
 
 export class ContactService {
-  static async getContacts(userId: string, limit = 50, offset = 0) {
-    const { data, error } = await supabase
+  static async getContacts(userId?: string, limit = 50, offset = 0) {
+    let query = supabase
       .from('contacts')
       .select('*')
-      .eq('assigned_agent_id', userId)
       .order('updated_at', { ascending: false })
       .range(offset, offset + limit - 1)
+
+    if (userId) {
+      query = query.eq('assigned_agent_id', userId)
+    }
+
+    const { data, error } = await query
 
     if (error) {
       console.error('Error fetching contacts:', error)

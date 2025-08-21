@@ -2,16 +2,21 @@ import { supabase } from '@/lib/supabase'
 import { Deal, DealInsert, DealUpdate } from '@/types/deal'
 
 export class DealService {
-  static async getDeals(userId: string, limit = 50, offset = 0) {
+  static async getDeals(userId?: string, limit = 50, offset = 0) {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('deals')
         .select(`*, 
           contacts(first_name, last_name, email, phone)
         `)
-        .eq('assigned_agent_id', userId)
         .order('created_at', { ascending: false })
         .range(offset, offset + limit - 1)
+
+      if (userId) {
+        query = query.eq('assigned_agent_id', userId)
+      }
+
+      const { data, error } = await query
 
       if (error) {
         console.error('Error fetching deals:', error)

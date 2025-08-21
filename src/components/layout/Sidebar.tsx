@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { ProfileService } from '@/services/ProfileService'
 import React, { useEffect, useState } from 'react'
+import { OnboardingResetButton } from '@/components/onboarding/OnboardingResetButton'
 import { 
   Home, 
   Users, 
@@ -18,12 +19,15 @@ import {
   ChevronDown,
   ChevronRight,
   Settings,
-  Calendar
+  Calendar,
+  Building2,
+  HelpCircle
 } from 'lucide-react'
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: Home },
   { name: 'Contacts', href: '/dashboard/contacts', icon: Users },
+  { name: 'Properties', href: '/dashboard/properties', icon: Building2 },
   { name: 'Deals', href: '/dashboard/deals', icon: Briefcase },
   { name: 'Calendar', href: '/dashboard/calendar', icon: Calendar },
   { 
@@ -205,6 +209,42 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
             )
           })}
         </nav>
+
+        {/* Help section */}
+        <div className="border-t border-gray-200 p-4">
+          <div className="space-y-2">
+            {!isCollapsed && (
+              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                Help & Support
+              </h3>
+            )}
+            
+            <div className="flex items-center space-x-2">
+              <HelpCircle className="w-4 h-4 text-gray-400" />
+              {!isCollapsed && (
+                <div className="flex-1">
+                  <OnboardingResetButton />
+                </div>
+              )}
+              {isCollapsed && (
+                <button
+                  onClick={() => {
+                    // Manual trigger for onboarding
+                    const onboardingCompleted = localStorage.getItem('onboardingCompleted')
+                    if (onboardingCompleted) {
+                      localStorage.removeItem('onboardingCompleted')
+                      window.location.reload()
+                    }
+                  }}
+                  className="text-sm text-gray-600 hover:text-gray-900"
+                  title="Restart Tour"
+                >
+                  Tour
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
 
         {/* User section */}
         <div className="border-t border-gray-200 p-4">

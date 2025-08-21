@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
+import { OnboardingModal } from '@/components/onboarding/OnboardingModal'
+import { useOnboarding } from '@/hooks/useOnboarding'
 import { Task } from '@/types/task'
 import StatsOverview from '@/components/dashboard/StatsOverview'
 import PriorityActions from '@/components/dashboard/PriorityActions'
@@ -242,11 +244,22 @@ function DraggableSection({ id, children, size, onSizeChange, className = '' }: 
 
 export default function DashboardHome() {
   const { user } = useAuth()
+  const { showOnboarding, completeOnboarding, triggerOnboarding } = useOnboarding()
   const router = useRouter()
   const [dashboardSections, setDashboardSections] = useState<ExtendedDashboardSection[]>(DEFAULT_SECTIONS)
   const [sectionOrder, setSectionOrder] = useState<string[]>(['stats', 'priority', 'pipeline', 'tasks', 'communication', 'insights', 'navigation'])
   const [taskSidebarOpen, setTaskSidebarOpen] = useState(false)
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
+
+  // Trigger onboarding on first dashboard visit
+  useEffect(() => {
+    if (user && !showOnboarding) {
+      const timer = setTimeout(() => {
+        triggerOnboarding()
+      }, 1500)
+      return () => clearTimeout(timer)
+    }
+  }, [user, showOnboarding, triggerOnboarding])
 
   // Drag and drop sensors
   const sensors = useSensors(
@@ -492,16 +505,21 @@ export default function DashboardHome() {
   const enabledSections = sectionOrder.filter(sectionId => isSectionEnabled(sectionId))
 
   return (
-    <div className="w-full min-h-screen bg-gray-50">
-      {/* Full width container */}
-      <div className="w-full px-4 sm:px-6 lg:px-8 py-6">
+    <div className="min-h-screen bg-gray-50">
+      <OnboardingModal
+        isOpen={showOnboarding}
+        onClose={completeOnboarding}
+        onComplete={completeOnboarding}
+      />
+      
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
-            Welcome back, {user?.email?.split('@')[0] || 'Agent'}
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            Welcome back{user?.email ? `, ${user.email.split('@')[0]}` : ''}!
           </h1>
           <p className="text-gray-600">
-            Here's what's happening with your real estate business today.
+            Here's your real estate command center for today.
           </p>
         </div>
 
